@@ -1,0 +1,50 @@
+[build-system]
+requires = [
+    "setuptools", 
+    "numpy",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name =  "habmoti"
+description = "A generic interface to generate a virtual buddy"
+dynamic = ["version"]
+authors = [
+    {name = "Pariterre", email = "pariterre@hotmail.com"},
+]
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python"
+]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy", 
+]
+
+# Any dev dependencies can go here. Also, if a package is not available on pip, it should be referenced here
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Documentation = "https://github.com/LaboratoireELAN/HABMOT-I/tree/main#readme"
+Source = "https://github.com/LaboratoireELAN/HABMOT-I"
+Tracker = "https://github.com/LaboratoireELAN/HABMOT-I/issues"
+
+# Auto-discover all packages inside the repo root
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["habmoti*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "habmoti.version.__version__"}
+
+# Any non *.py files that must be bundled with the package must be listed here. ** and * wildcards can be used
+[tool.setuptools.package-data]
+habmoti = [
+    # "subfolder/**/*.extension"
+]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = "tests"
