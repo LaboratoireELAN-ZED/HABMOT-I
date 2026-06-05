@@ -1,16 +1,21 @@
 import os
 from pathlib import Path
-from time import time
+from time import sleep
 
-from habmoti import Habmoti, MockedZedDevice
+from habmoti import Habmoti, MockedZedDevice, ToConsoleAnalyzer
 
 
 def main():
-    device = MockedZedDevice(configuration_filepath=Path(os.getenv("HABMOTI_CONFIG_PATH")))
-    habmoti = Habmoti(kinematics_device=device, save_path=Path(os.getenv("HABMOTI_SAVE_PATH")))
+    device = MockedZedDevice(
+        configuration_filepath=Path(os.getenv("HABMOTI_CONFIG_PATH")), target_fps=10, max_fps_lag_ms=0
+    )
+    analyzer = ToConsoleAnalyzer()
+    save_path = Path(os.getenv("HABMOTI_SAVE_PATH"))
+
+    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzer)  # , save_path=save_path)
 
     habmoti.start()
-    time.sleep(10)
+    sleep(10)
     habmoti.stop()
 
 

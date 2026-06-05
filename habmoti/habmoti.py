@@ -6,7 +6,7 @@ import threading
 
 from .data.frame_data import FrameData
 from .analyses.analyzer import Analyzer, EmptyAnalyzer
-from .kinematics.kinematics_device import KinematicsDevice
+from .kinematics.body_kinematics_device import BodyKinematicsDevice
 from .viewers.viewer import Viewer
 
 _logger = logging.getLogger(__name__)
@@ -15,12 +15,12 @@ _logger = logging.getLogger(__name__)
 class Habmoti:
     def __init__(
         self,
-        kinematics_device: KinematicsDevice,
+        body_kinematics_device: BodyKinematicsDevice,
         analyzer: Analyzer | None = None,
         viewer: Viewer | None = None,
         save_path: Path | None = None,
     ):
-        self._kinematics_device = kinematics_device
+        self._body_kinematics_device = body_kinematics_device
         self._analyzer = analyzer if analyzer is not None else EmptyAnalyzer()
         self._viewer = viewer
         self._save_path = save_path
@@ -69,38 +69,43 @@ class Habmoti:
         """
         Capture loop: continuously capture data from the device and put it in the queue.
         """
-        self._kinematics_device.start()
-        while not self._stop_event.is_set():
-            try:
-                frame_data = FrameData(
-                    timestamp=int(time.time() * 1000),
-                    body_kinematics=self._kinematics_device.get_current_body_kinematics(),
-                    raw=self._kinematics_device.get_raw_data(),
-                )
-                self._to_analyse_queue.put(frame_data)
-                if self._has_viewer:
-                    self._to_view_queue.put(frame_data)
+        try:
+            self._body_kinematics_device.start()
 
-            except Exception as e:
-                _logger.error("Capture error:", exc_info=e)
+            while not self._stop_event.is_set():
+                try:
+                    frame_data = FrameData(
+                        timestamp=int(time.time() * 1000),
+                        body_kinematics=self._body_kinematics_device.get_current_body_kinematics(),
+                    )
+                    self._to_analyse_queue.put(frame_data)
+                    if self._has_viewer:
+                        self._to_view_queue.put(frame_data)
 
-        self._kinematics_device.stop()
-        self._capture_is_over_event.set()
+                except Exception as e:
+                    _logger.error("Capture error:", exc_info=e)
+
+            self._body_kinematics_device.stop()
+
+        finally:
+            self._capture_is_over_event.set()
 
     def _analysis_loop(self) -> None:
         """
         Analysis loop: continuously get frames from the queue and analyze them.
         When the capture is over, the loop continues until the queue is empty then stops.
         """
-        while not self._capture_is_over_event.is_set() or not self._to_analyse_queue.empty():
-            try:
-                frame: FrameData = self._to_analyse_queue.get(timeout=0.5)
-                self._analyzer.perform(frame)
-                if self._has_writer:
-                    self._to_save_queue.put(frame)
-            except queue.Empty:
-                continue
-        self._analysis_loop_is_over_event.set()
+        try:
+            while not self._capture_is_over_event.is_set() or not self._to_analyse_queue.empty():
+                try:
+                    frame: FrameData = self._to_analyse_queue.get(timeout=0.5)
+                    self._analyzer.perform(frame)
+                    if self._has_writer:
+                        self._to_save_queue.put(frame)
+                except queue.Empty:
+                    continue
+        finally:
+            self._analysis_loop_is_over_event.set()
 
     @property
     def _has_viewer(self) -> bool:

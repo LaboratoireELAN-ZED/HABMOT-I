@@ -2,31 +2,31 @@ import pathlib as Path
 from typing import TYPE_CHECKING, override, Any
 
 from .body_kinematics import BodyKinematics, JointCenter
-from .kinematics_device import KinematicsDevice
+from .body_kinematics_device import BodyKinematicsDevice
 
 if TYPE_CHECKING:
     import pyzed.sl as sl  # type: ignore
 
 
-class ZedDevice(KinematicsDevice):
+class ZedDevice(BodyKinematicsDevice):
     def __init__(self, configuration_filepath: Path):
         self._load_module()
 
+        self._configuration_filepath = configuration_filepath
         self._fusion_configurations: list["sl._sl.FusionConfiguration"] = None
         self._senders: dict[str, "sl._sl.Camera"] = {}
-        self._network_senders: dict[str, "sl._sl.Camera"] = {}
-        self._initialize_cameras(configuration_filepath=configuration_filepath)
 
+        self._fusion: "sl._sl.Fusion" = None
         self._rt: "sl._sl.BodyTrackingFusionRuntimeParameters" = None
         self._bodies: "sl._sl.Bodies" = None
+
+    @override
+    def start(self) -> None:
+        self._initialize_cameras()
         self._initialize_body_tracking()
 
     @override
     def get_current_body_kinematics(self) -> BodyKinematics:
-        raise NotImplementedError("The get_current_body_kinematics method is not implemented yet.")
-
-    @override
-    def get_raw_data(self) -> Any:
         # Get the bodies for each camera
         for serial in self._senders:
             zed = self._senders[serial]
@@ -36,6 +36,23 @@ class ZedDevice(KinematicsDevice):
         # Fuse the bodies from all cameras
         if self._fusion.process() == self._sl.FUSION_ERROR_CODE.SUCCESS:
             self._fusion.retrieve_bodies(self._bodies, self._rt)
+
+        # Convert the bodies to BodyKinematics
+        joint_centers = {}
+        for body in self._bodies.body_list:
+            for joint in body.skeleton.joints:
+                joint_centers[JointCenter.from_joint_type(joint.type)] = (
+                    joint.position.x,
+                    joint.position.y,
+                    joint.position.z,
+                )
+        return BodyKinematics(joint_centers=joint_centers)
+
+    @override
+    def stop(self) -> None:
+        for serial in self._senders:
+            zed = self._senders[serial]
+            zed.close()
 
     def _load_module(self):
         try:
@@ -49,14 +66,14 @@ class ZedDevice(KinematicsDevice):
 
     @property
     def camera_count(self) -> int:
-        return len(self._senders) + len(self._network_senders)
+        return len(self._senders)
 
-    def _initialize_cameras(self, configuration_filepath: Path):
+    def _initialize_cameras(self):
         self._fusion_configurations = self._sl.read_fusion_configuration_file(
-            configuration_filepath, self._sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP, self._sl.UNIT.METER
+            self._configuration_filepath, self._sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP, self._sl.UNIT.METER
         )
         if len(self._fusion_configurations) <= 0:
-            raise ValueError(f"Invalid configuration file: {configuration_filepath}")
+            raise ValueError(f"Invalid configuration file: {self._configuration_filepath}")
 
         # common parameters
         init_params = self._sl.InitParameters()
@@ -80,11 +97,10 @@ class ZedDevice(KinematicsDevice):
         for conf in self._fusion_configurations:
             print("Try to open ZED", conf.serial_number)
             init_params.input = self._sl.InputType()
+
             # network cameras are already running, or so they should
             if conf.communication_parameters.comm_type == self._sl.COMM_TYPE.LOCAL_NETWORK:
-                self._network_senders[conf.serial_number] = conf.serial_number
-
-            # local camera needs to be run form here, in the same process than the fusion
+                raise NotImplementedError("Network cameras are not supported yet.")
             else:
                 init_params.input = conf.input_type
 
@@ -118,10 +134,10 @@ class ZedDevice(KinematicsDevice):
         init_fusion_parameters.verbose = True
 
         communication_parameters = self._sl.CommunicationParameters()
-        fusion = self._sl.Fusion()
+        self._fusion = self._sl.Fusion()
         camera_identifiers = []
 
-        fusion.init(init_fusion_parameters)
+        self._fusion.init(init_fusion_parameters)
 
         bodies = self._sl.Bodies()
         for serial in self._senders:
@@ -135,7 +151,7 @@ class ZedDevice(KinematicsDevice):
             uuid.serial_number = conf.serial_number
             print("Subscribing to", conf.serial_number, conf.communication_parameters.comm_type)
 
-            status = fusion.subscribe(uuid, conf.communication_parameters, conf.pose)
+            status = self._fusion.subscribe(uuid, conf.communication_parameters, conf.pose)
             if status != self._sl.FUSION_ERROR_CODE.SUCCESS:
                 print("Unable to subscribe to", uuid.serial_number, status)
             else:
@@ -151,7 +167,7 @@ class ZedDevice(KinematicsDevice):
         body_tracking_fusion_params.enable_tracking = True
         body_tracking_fusion_params.enable_body_fitting = False
 
-        fusion.enable_body_tracking(body_tracking_fusion_params)
+        self._fusion.enable_body_tracking(body_tracking_fusion_params)
 
         self._rt = self._sl.BodyTrackingFusionRuntimeParameters()
         self._rt.skeleton_minimum_allowed_keypoints = 7
@@ -159,11 +175,46 @@ class ZedDevice(KinematicsDevice):
 
 
 class MockedZedDevice(ZedDevice):
+    def __init__(self, configuration_filepath: Path, target_fps: int = 60, max_fps_lag_ms: int = 0):
+        """
+        A mocked version of the ZedDevice that generates random body kinematics data. It is used for testing purposes.
+        Args:
+            configuration_filepath: The path to the configuration file.
+            target_fps: The target fps of the device.
+            max_fps_lag_ms: The maximum lag in ms to add to the capture time to simulate fps variability. Set to 0 to have a fixed fps.
+        """
+
+        super().__init__(configuration_filepath)
+
+        import time
+
+        self._dt = 1 / target_fps
+        self._max_fps_lag = max_fps_lag_ms / 1000.0
+        self._previous_capture_time = time.time()
+
     @override
     def _load_module(self):
         self._sl = self
         self.coordinate_system = None
         self.unit = None
+
+    @override
+    def get_current_body_kinematics(self) -> BodyKinematics:
+        # Make sure data are not feed over the maximum fps of the device
+        import time
+
+        lag_dt = 0.0
+        if self._max_fps_lag > 0:
+            import random
+
+            lag_dt = random.uniform(0.0, self._max_fps_lag)
+
+        current_time = time.time()
+        if current_time - self._previous_capture_time < self._dt:
+            time.sleep(self._dt - (current_time - self._previous_capture_time) + lag_dt)
+        self._previous_capture_time = time.time()
+
+        return super().get_current_body_kinematics()
 
     # Mocker of the sl module
     COORDINATE_SYSTEM = type("COORDINATE_SYSTEM", (), {"RIGHT_HANDED_Y_UP": 0})
@@ -252,7 +303,8 @@ class MockedZedDevice(ZedDevice):
                 "enable_body_tracking": lambda _, __: MockedZedDevice.ERROR_CODE.SUCCESS,
                 "start_publishing": lambda _, __: None,
                 "grab": lambda _: MockedZedDevice.ERROR_CODE.SUCCESS,
-                "retrieve_bodies": lambda _, __: None,
+                "retrieve_bodies": lambda self, bodies: MockedZedDevice._update_random_body_kinematics(self, bodies),
+                "close": lambda _: None,
             },
         )()
 
@@ -278,12 +330,28 @@ class MockedZedDevice(ZedDevice):
                 "init": lambda _, __: None,
                 "subscribe": lambda _, __, ___, ____: MockedZedDevice.ERROR_CODE.SUCCESS,
                 "enable_body_tracking": lambda _, __: None,
+                "process": lambda _: MockedZedDevice.FUSION_ERROR_CODE.SUCCESS,
+                "retrieve_bodies": lambda self, bodies, __: MockedZedDevice._update_random_body_kinematics(
+                    self, bodies
+                ),
             },
         )()
 
     @staticmethod
+    def Body():
+        return type(
+            "Body",
+            (),
+            {"skeleton": type("Skeleton", (), {"joints": []})()},
+        )()
+
+    @staticmethod
     def Bodies():
-        return type("Bodies", (), {})()
+        return type(
+            "Bodies",
+            (),
+            {"is_tracked": lambda _, __: True, "body_list": []},
+        )()
 
     @staticmethod
     def CameraIdentifier():
@@ -304,3 +372,23 @@ class MockedZedDevice(ZedDevice):
             (),
             {"enable_tracking": None, "enable_body_fitting": None},
         )()
+
+    @staticmethod
+    def _update_random_body_kinematics(source, bodies):
+        import random
+
+        if not bodies.body_list:
+            bodies.body_list = [MockedZedDevice.Body() for _ in range(2)]
+            for body in bodies.body_list:
+                body.skeleton.joints = [
+                    type(
+                        "Joint", (), {"type": i, "position": type("Position", (), {"x": None, "y": None, "z": None})()}
+                    )()
+                    for i in range(18)
+                ]
+
+        for body in bodies.body_list:
+            for joint in body.skeleton.joints:
+                joint.position.x = random.uniform(-1, 1)
+                joint.position.y = random.uniform(-1, 1)
+                joint.position.z = random.uniform(0, 2)

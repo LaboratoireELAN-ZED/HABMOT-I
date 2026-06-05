@@ -29,3 +29,17 @@ class EmptyAnalyzer(Analyzer):
     @override
     def perform(self, frame_data: FrameData) -> None:
         pass
+
+
+class ToConsoleAnalyzer(Analyzer):
+    @override
+    def perform(self, frame_data: FrameData) -> None:
+        import datetime
+        from ..kinematics.body_kinematics import JointCenter
+
+        timestamp = frame_data.timestamp
+        timestamp_as_date = datetime.datetime.fromtimestamp(timestamp / 1000.0)
+
+        print(
+            f"At {timestamp_as_date}, received: {frame_data.body_kinematics.joint_centers[JointCenter.LEFT_SHOULDER]}"
+        )
