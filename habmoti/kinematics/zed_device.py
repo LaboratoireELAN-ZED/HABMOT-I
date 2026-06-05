@@ -41,11 +41,10 @@ class ZedDevice(BodyKinematicsDevice):
         joint_centers = {}
         for body in self._bodies.body_list:
             for joint in body.skeleton.joints:
-                joint_centers[JointCenter.from_joint_type(joint.type)] = (
-                    joint.position.x,
-                    joint.position.y,
-                    joint.position.z,
-                )
+                joint_center = JointCenter.from_joint_type(joint.type)
+                if joint_center is None:
+                    continue
+                joint_centers[joint_center] = (joint.position.x, joint.position.y, joint.position.z)
         return BodyKinematics(joint_centers=joint_centers)
 
     @override
@@ -53,6 +52,13 @@ class ZedDevice(BodyKinematicsDevice):
         for serial in self._senders:
             zed = self._senders[serial]
             zed.close()
+
+        self._fusion_configurations = None
+        self._senders = {}
+
+        self._fusion = None
+        self._rt = None
+        self._bodies = None
 
     def _load_module(self):
         try:

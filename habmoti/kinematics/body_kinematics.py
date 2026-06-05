@@ -24,6 +24,10 @@ class JointCenter(Enum):
         }
         return mapping.get(joint_type, None)
 
+    @property
+    def name(self) -> str:
+        return self._name_.lower()
+
 
 @dataclass(frozen=True)
 class BodyKinematics:
