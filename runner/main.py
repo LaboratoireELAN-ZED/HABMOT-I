@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from time import sleep
 
-from habmoti import Habmoti, ZedDevice, MockedZedDevice, AnalyzerList, ToConsoleAnalyzer, ToCsvAnalyzer, OGLViewer
+from habmoti import Habmoti, ZedDevice, MockedZedDevice, AnalyzerList, ToConsoleAnalyzer, ToCsvAnalyzer, ToOglAnalyzer
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     else:
         raise NotImplementedError(f"Unsupported device type: {device_type}")
 
-    analyzers = []
+    analyzers = AnalyzerList()
     for analyzer in json.loads(os.getenv("HABMOTI_ANALYZERS", "[]")):
         if analyzer == "to_console":
             parameters = json.loads(os.getenv("HABMOTI_TO_CONSOLE_ANALYZER_PARAMETERS", "{}"))
@@ -39,16 +39,12 @@ def main():
                     "Missing 'filepath' parameter in the HABMOTI_TO_CSV_ANALYZER_PARAMETERS environment variable"
                 )
             analyzers.append(ToCsvAnalyzer(filepath=Path(parameters["filepath"])))
+        elif analyzer == "to_ogl":
+            analyzers.append(ToOglAnalyzer())
         else:
             raise NotImplementedError(f"Unsupported analyzer type: {analyzer}")
 
-    analyzers = AnalyzerList(analyzers=analyzers)
-    viewer = OGLViewer()
-    habmoti = Habmoti(
-        body_kinematics_device=device,
-        # analyzer=analyzers,
-        viewer=viewer,
-    )
+    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzers)
 
     habmoti.start()
     sleep(10)

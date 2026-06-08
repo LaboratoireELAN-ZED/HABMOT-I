@@ -1,24 +1,22 @@
 import math
 from threading import Lock
-from typing import override, TYPE_CHECKING
+from typing import override
 
 import array
 import numpy as np
 from numpy.typing import NDArray
 
-from ..viewer import Viewer, BodyKinematicsDevice, FrameData
+
+from ..analyzer import Analyzer
+from ...data.frame_data import FrameData
+from ...kinematics.body_kinematics_device import BodyKinematicsDevice
 from ...kinematics.body_kinematics import BodyKinematics, JointCenter
 from ...kinematics.body_kinematics_device import BodyKinematicsDevice
-
-if TYPE_CHECKING:
-    from OpenGL import GL  # type: ignore
-    from OpenGL import GLU  # type: ignore
-    from OpenGL import GLUT  # type: ignore
 
 _M_PI = 3.1415926
 
 
-class OGLViewer(Viewer):
+class ToOglAnalyzer(Analyzer):
     """
     Class that manages input events, window and OpenGL rendering pipeline
     """
@@ -96,7 +94,7 @@ class OGLViewer(Viewer):
         self._is_started = True
 
     @override
-    def update(self, frame_data: FrameData) -> None:
+    def perform(self, frame_data: FrameData) -> None:
         if self._is_started:
             self._update_bodies(frame_data.body_kinematics)
             _OGL.glut.glutMainLoopEvent()

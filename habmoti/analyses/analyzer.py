@@ -34,23 +34,31 @@ class Analyzer(ABC):
 
 
 class AnalyzerList(Analyzer):
-    def __init__(self, analyzers: list[Analyzer]):
-        self.analyzers = analyzers
+    def __init__(self, analyzers: list[Analyzer] = None):
+        self._analyzers = analyzers if analyzers is not None else []
+        self._is_locked = False
+
+    def append(self, analyzer: Analyzer) -> None:
+        if self._is_locked:
+            raise RuntimeError("Cannot append an analyzer to a locked AnalyzerList")
+        self._analyzers.append(analyzer)
 
     @override
     def start(self, device: BodyKinematicsDevice) -> None:
-        for analyzer in self.analyzers:
+        self._is_locked = True
+        for analyzer in self._analyzers:
             analyzer.start(device=device)
 
     @override
     def perform(self, frame_data: FrameData) -> None:
-        for analyzer in self.analyzers:
+        for analyzer in self._analyzers:
             analyzer.perform(frame_data)
 
     @override
     def stop(self) -> None:
-        for analyzer in self.analyzers:
+        for analyzer in self._analyzers:
             analyzer.stop()
+        self._is_locked = False
 
 
 class EmptyAnalyzer(Analyzer):
