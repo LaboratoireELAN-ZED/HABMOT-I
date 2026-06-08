@@ -332,13 +332,37 @@ class MockedZedDevice(ZedDevice):
             {
                 "open": lambda _, __: MockedZedDevice.ERROR_CODE.SUCCESS,
                 "enable_positional_tracking": lambda _, __: MockedZedDevice.ERROR_CODE.SUCCESS,
-                "enable_body_tracking": lambda _, __: MockedZedDevice.ERROR_CODE.SUCCESS,
+                "enable_body_tracking": MockedZedDevice._setup_body_tracking,
                 "start_publishing": lambda _, __: None,
                 "grab": lambda _: MockedZedDevice.ERROR_CODE.SUCCESS,
-                "retrieve_bodies": lambda _, bodies: MockedZedDevice._update_random_body_kinematics(bodies),
+                "retrieve_bodies": MockedZedDevice._retrieve_bodies,
                 "close": lambda _: None,
+                "_body_format": None,
+                "_camera_index_in_bodylist": None,
             },
         )()
+
+    @staticmethod
+    def _setup_body_tracking(self, parameters):
+        self._body_format = parameters.body_format
+        return MockedZedDevice.ERROR_CODE.SUCCESS
+
+    @staticmethod
+    def _retrieve_bodies(self, bodies):
+        # If this is the first time we add this camera to the body list, remember the index of which
+        if self._camera_index_in_bodylist is None:
+            self._camera_index_in_bodylist = len(bodies.body_list)
+        while len(bodies.body_list) <= self._camera_index_in_bodylist:
+            bodies.body_list.append(None)
+
+        # Add new data
+        if self._body_format == MockedZedDevice.BODY_FORMAT.BODY_18:
+            data = type("Body", (), {"keypoint": np.random.rand(18, 3)})()
+        else:
+            raise NotImplementedError(f"Unsupported body format: {self._body_format}")
+        bodies.body_list[self._camera_index_in_bodylist] = data
+
+        return MockedZedDevice.ERROR_CODE.SUCCESS
 
     @staticmethod
     def InitFusionParameters():
@@ -363,7 +387,7 @@ class MockedZedDevice(ZedDevice):
                 "subscribe": lambda _, __, ___, ____: MockedZedDevice.ERROR_CODE.SUCCESS,
                 "enable_body_tracking": lambda _, __: None,
                 "process": lambda _: MockedZedDevice.FUSION_ERROR_CODE.SUCCESS,
-                "retrieve_bodies": lambda _, bodies, __: MockedZedDevice._update_random_body_kinematics(bodies),
+                "retrieve_bodies": lambda _, bodies, __: None,
             },
         )()
 
@@ -398,10 +422,3 @@ class MockedZedDevice(ZedDevice):
             (),
             {"enable_tracking": None, "enable_body_fitting": None},
         )()
-
-    @staticmethod
-    def _update_random_body_kinematics(bodies):
-        if not bodies.body_list:
-            bodies.body_list = [MockedZedDevice.Body() for _ in range(2)]
-            for body in bodies.body_list:
-                body.keypoint = np.random.rand((18, 3))
