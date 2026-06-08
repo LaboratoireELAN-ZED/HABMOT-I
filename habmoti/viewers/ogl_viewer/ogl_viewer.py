@@ -35,9 +35,9 @@ class OGLViewer(Viewer):
 
         # Prepare internal elements
         self._shader_sk_image: _Shader = None
-        self._shader_sk_MVP = None
+        self._shader_sk_mvp = None
         self._shader_sphere_image = None
-        self._shader_sphere_MVP = None
+        self._shader_sphere_mvp = None
         self._shader_sphere_color = None
         self._shader_sphere_pt = None
 
@@ -69,10 +69,10 @@ class OGLViewer(Viewer):
 
         # Compile and create the shader for 3D objects
         self._shader_sk_image = _Shader(self._vertex_shader(), self._fragment_shader())
-        self._shader_sk_MVP = _OGL.gl.glGetUniformLocation(self._shader_sk_image.get_program_id(), "u_mvpMatrix")
+        self._shader_sk_mvp = _OGL.gl.glGetUniformLocation(self._shader_sk_image.get_program_id(), "u_mvpMatrix")
 
         self._shader_sphere_image = _Shader(self._sphere_shader(), self._fragment_shader())
-        self._shader_sphere_MVP = _OGL.gl.glGetUniformLocation(
+        self._shader_sphere_mvp = _OGL.gl.glGetUniformLocation(
             self._shader_sphere_image.get_program_id(), "u_mvpMatrix"
         )
         self._shader_sphere_color = _OGL.gl.glGetUniformLocation(self._shader_sphere_image.get_program_id(), "u_color")
@@ -176,7 +176,7 @@ class OGLViewer(Viewer):
     def _draw(self):
         _OGL.gl.glUseProgram(self._shader_sk_image.get_program_id())
         _OGL.gl.glUniformMatrix4fv(
-            self._shader_sk_MVP, 1, _OGL.gl.GL_TRUE, (_OGL.gl.GLfloat * len(self._projection))(*self._projection)
+            self._shader_sk_mvp, 1, _OGL.gl.GL_TRUE, (_OGL.gl.GLfloat * len(self._projection))(*self._projection)
         )
 
         _OGL.gl.glPolygonMode(_OGL.gl.GL_FRONT_AND_BACK, _OGL.gl.GL_FILL)
@@ -186,7 +186,7 @@ class OGLViewer(Viewer):
 
         _OGL.gl.glUseProgram(self._shader_sphere_image.get_program_id())
         _OGL.gl.glUniformMatrix4fv(
-            self._shader_sphere_MVP,
+            self._shader_sphere_mvp,
             1,
             _OGL.gl.GL_TRUE,
             (_OGL.gl.GLfloat * len(self._projection))(*self._projection),
