@@ -3,10 +3,31 @@ import os
 from pathlib import Path
 from time import sleep
 
-from habmoti import Habmoti, ZedDevice, MockedZedDevice, AnalyzerList, ToConsoleAnalyzer, ToCsvAnalyzer, ToOglAnalyzer
+from habmoti import (
+    Habmoti,
+    BodyKinematicsDevice,
+    ZedDevice,
+    MockedZedDevice,
+    Analyzer,
+    AnalyzerList,
+    ToConsoleAnalyzer,
+    ToCsvAnalyzer,
+    ToOglAnalyzer,
+)
 
 
 def main():
+    device = _select_device()
+    analyzers = _select_analyzers(device=device)
+
+    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzers)
+
+    habmoti.start()
+    sleep(10)
+    habmoti.stop()
+
+
+def _select_device() -> BodyKinematicsDevice:
     device_type = os.getenv("HABMOTI_DEVICE_TYPE")
     if device_type is None:
         raise ValueError("Environment variable 'HABMOTI_DEVICE_TYPE' is not set")
@@ -20,7 +41,10 @@ def main():
         device = ZedDevice(**parameters)
     else:
         raise NotImplementedError(f"Unsupported device type: {device_type}")
+    return device
 
+
+def _select_analyzers(device: BodyKinematicsDevice) -> Analyzer:
     analyzers = AnalyzerList()
     for analyzer in json.loads(os.getenv("HABMOTI_ANALYZERS", "[]")):
         if analyzer == "to_console":
@@ -43,12 +67,7 @@ def main():
             analyzers.append(ToOglAnalyzer())
         else:
             raise NotImplementedError(f"Unsupported analyzer type: {analyzer}")
-
-    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzers)
-
-    habmoti.start()
-    sleep(10)
-    habmoti.stop()
+    return analyzers
 
 
 if __name__ == "__main__":

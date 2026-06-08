@@ -4,7 +4,7 @@ import time
 import threading
 
 from .data.frame_data import FrameData
-from .analyses.analyzer import Analyzer, EmptyAnalyzer
+from .analyses.analyzer import Analyzer
 from .kinematics.body_kinematics_device import BodyKinematicsDevice
 
 _logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class Habmoti:
         analyzer: Analyzer | None = None,
     ):
         self._body_kinematics_device = body_kinematics_device
-        self._analyzer = analyzer if analyzer is not None else EmptyAnalyzer()
+        self._analyzer = analyzer
 
         self._to_analyzer_queue = queue.Queue()
 

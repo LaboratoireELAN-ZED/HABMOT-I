@@ -1,9 +1,8 @@
-from .analyzer import Analyzer, AnalyzerList, EmptyAnalyzer, ToConsoleAnalyzer, ToCsvAnalyzer
-from .viewers import ToOglAnalyzer
+from .analyzer import Analyzer, AnalyzerList, ToCsvAnalyzer
+from .viewers import *
 
-__all__ = [
+__all__ = viewers.__all__ + [
     Analyzer.__name__,
-    EmptyAnalyzer.__name__,
     ToConsoleAnalyzer.__name__,
     AnalyzerList.__name__,
     ToCsvAnalyzer.__name__,

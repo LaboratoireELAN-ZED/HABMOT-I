@@ -6,12 +6,8 @@ import array
 import numpy as np
 from numpy.typing import NDArray
 
-
-from ..analyzer import Analyzer
-from ...data.frame_data import FrameData
-from ...kinematics.body_kinematics_device import BodyKinematicsDevice
+from ..analyzer import Analyzer, FrameData, BodyKinematicsDevice
 from ...kinematics.body_kinematics import BodyKinematics, JointCenter
-from ...kinematics.body_kinematics_device import BodyKinematicsDevice
 
 _M_PI = 3.1415926
 

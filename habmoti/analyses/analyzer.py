@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import override
 
 from ..data.frame_data import FrameData
-from ..kinematics.body_kinematics import JointCenter
 from ..kinematics.body_kinematics_device import BodyKinematicsDevice
 
 
@@ -59,44 +58,6 @@ class AnalyzerList(Analyzer):
         for analyzer in self._analyzers:
             analyzer.stop()
         self._is_locked = False
-
-
-class EmptyAnalyzer(Analyzer):
-    @override
-    def start(self, device: BodyKinematicsDevice) -> None:
-        pass
-
-    @override
-    def perform(self, frame_data: FrameData) -> None:
-        pass
-
-    @override
-    def stop(self) -> None:
-        pass
-
-
-class ToConsoleAnalyzer(Analyzer):
-    def __init__(self, joint_center: JointCenter):
-        self._joint_center = joint_center
-
-        super().__init__()
-
-    @override
-    def start(self, device: BodyKinematicsDevice) -> None:
-        pass
-
-    @override
-    def perform(self, frame_data: FrameData) -> None:
-        import datetime
-
-        timestamp = frame_data.timestamp
-        timestamp_as_date = datetime.datetime.fromtimestamp(timestamp / 1000.0)
-
-        print(f"At {timestamp_as_date}, received: {frame_data.body_kinematics.joint_centers[self._joint_center]}")
-
-    @override
-    def stop(self) -> None:
-        pass
 
 
 class ToCsvAnalyzer(Analyzer):
