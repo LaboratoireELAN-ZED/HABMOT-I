@@ -11,6 +11,10 @@ class JointCenter(IntEnum):
     def label(self) -> str:
         return self.name.lower()
 
+    @staticmethod
+    def from_name(name: str) -> "JointCenter":
+        raise NotImplementedError("This method should be implemented in subclasses of JointCenter")
+
 
 class JointCenter18Joints(JointCenter):
     NOSE = 0
@@ -31,6 +35,10 @@ class JointCenter18Joints(JointCenter):
     RIGHT_EAR = 16
     RIGHT_HIP = 8
     LEFT_EAR = 17
+
+    @staticmethod
+    def from_name(name: str) -> "JointCenter":
+        return JointCenter18Joints[name.upper()]
 
 
 JC = TypeVar("JC", bound=JointCenter)

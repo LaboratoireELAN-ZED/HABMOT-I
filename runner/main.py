@@ -1,23 +1,47 @@
+import json
 import os
 from pathlib import Path
 from time import sleep
 
-from habmoti import Habmoti, MockedZedDevice, AnalyzerList, ToConsoleAnalyzer, ToCsvAnalyzer, JointCenter18Joints
+from habmoti import Habmoti, ZedDevice, MockedZedDevice, AnalyzerList, ToConsoleAnalyzer, ToCsvAnalyzer
 
 
 def main():
-    device = MockedZedDevice(
-        configuration_filepath=Path(os.getenv("HABMOTI_CONFIG_PATH")), target_fps=10, max_fps_lag_ms=0
-    )
-    save_path = Path(os.getenv("HABMOTI_SAVE_PATH"))
-    analyzer = AnalyzerList(
-        analyzers=[
-            ToConsoleAnalyzer(joint_center=JointCenter18Joints.NOSE),
-            ToCsvAnalyzer(filepath=save_path),
-        ]
-    )
+    device_type = os.getenv("HABMOTI_DEVICE_TYPE")
+    if device_type is None:
+        raise ValueError("Environment variable 'HABMOTI_DEVICE_TYPE' is not set")
 
-    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzer)
+    if device_type == "mocked_zed":
+        parameters = json.loads(os.getenv("HABMOTI_MOCKED_ZED_PARAMETERS", "{}"))
+        device = MockedZedDevice(**parameters)
+    elif device_type == "zed":
+        parameters = json.loads(os.getenv("HABMOTI_ZED_PARAMETERS", "{}"))
+        device = ZedDevice(**parameters)
+    else:
+        raise NotImplementedError(f"Unsupported device type: {device_type}")
+
+    analyzers = []
+    for analyzer in json.loads(os.getenv("HABMOTI_ANALYZERS", "[]")):
+        if analyzer == "to_console":
+            parameters = json.loads(os.getenv("HABMOTI_TO_CONSOLE_ANALYZER_PARAMETERS", "{}"))
+            if "joint_center" not in parameters:
+                raise ValueError(
+                    "Missing 'joint_center' parameter in the HABMOTI_TO_CONSOLE_ANALYZER_PARAMETERS environment variable"
+                )
+            analyzers.append(
+                ToConsoleAnalyzer(joint_center=device.joint_center_type.from_name(parameters["joint_center"]))
+            )
+        elif analyzer == "to_csv":
+            parameters = json.loads(os.getenv("HABMOTI_TO_CSV_ANALYZER_PARAMETERS", "{}"))
+            if "filepath" not in parameters:
+                raise ValueError(
+                    "Missing 'filepath' parameter in the HABMOTI_TO_CSV_ANALYZER_PARAMETERS environment variable"
+                )
+            analyzers.append(ToCsvAnalyzer(filepath=Path(parameters["filepath"])))
+        else:
+            raise NotImplementedError(f"Unsupported analyzer type: {analyzer}")
+
+    habmoti = Habmoti(body_kinematics_device=device, analyzer=AnalyzerList(analyzers=analyzers))
 
     habmoti.start()
     sleep(10)
