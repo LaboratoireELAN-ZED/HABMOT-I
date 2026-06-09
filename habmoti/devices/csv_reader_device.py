@@ -17,8 +17,9 @@ if TYPE_CHECKING:
 
 
 class CsvReaderDevice(Device):
-    def __init__(self, filepath: Path):
+    def __init__(self, filepath: Path, frame_by_frame: bool = False):
         self._filepath = filepath
+        self._frame_by_frame = frame_by_frame
         self._parse_header()
         self._data = None
         self._current_index = None
@@ -34,6 +35,8 @@ class CsvReaderDevice(Device):
         self._current_index += 1
         if self._current_index >= self._data.shape[0]:
             return None
+        if self._frame_by_frame:
+            input("Press Enter to continue to the next frame...")
 
         return FrameData(
             timestamp=int(self._data[self._current_index, 0]),
