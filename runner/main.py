@@ -51,9 +51,7 @@ def _select_analyzers(device: BodyKinematicsDevice) -> Analyzer:
                 raise ValueError(
                     "Missing 'joint_center' parameter in the HABMOTI_TO_CONSOLE_ANALYZER_PARAMETERS environment variable"
                 )
-            analyzers.append(
-                ToConsoleAnalyzer(joint_center=device.joint_center_type.from_name(parameters["joint_center"]))
-            )
+            analyzers.append(ToConsoleAnalyzer(joint_center=device.body_model.from_name(parameters["joint_center"])))
         elif analyzer == "to_csv":
             parameters = json.loads(os.getenv("HABMOTI_TO_CSV_ANALYZER_PARAMETERS", "{}"))
             if "filepath" not in parameters:

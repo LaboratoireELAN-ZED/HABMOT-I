@@ -1,11 +1,11 @@
 from time import time
 from typing import override, TYPE_CHECKING
 
-from .analysis import AnalysesType
-from .analyzer import Analyzer, FrameData
+from ..analysis import AnalysesType
+from ..analyzer import Analyzer, FrameData
 
 if TYPE_CHECKING:
-    from ..habmoti import Habmoti
+    from ..analyzer import Habmoti
 
 
 class ControllerAnalyzer(Analyzer):

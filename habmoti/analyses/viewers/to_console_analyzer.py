@@ -1,14 +1,14 @@
 from typing import override, TYPE_CHECKING
 
 from ..analyzer import Analyzer, FrameData
-from ...kinematics.body_kinematics import JointCenter
+from ...kinematics.body_kinematics import BodyModel
 
 if TYPE_CHECKING:
     from ...habmoti import Habmoti
 
 
 class ToConsoleAnalyzer(Analyzer):
-    def __init__(self, joint_center: JointCenter):
+    def __init__(self, joint_center: BodyModel):
         self._joint_center = joint_center
 
         super().__init__()

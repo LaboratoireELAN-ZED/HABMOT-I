@@ -14,7 +14,7 @@ class FrameData:
         return {
             "timestamp": self.timestamp,
             "body_kinematics": {
-                joint.name: self.body_kinematics.joint_centers[joint] for joint in self.body_kinematics.joint_centers
+                joint.name: self.body_kinematics.joint_centers[joint] for joint in self.body_kinematics.body_model
             },
             "analysis": self.analysis.current,
         }

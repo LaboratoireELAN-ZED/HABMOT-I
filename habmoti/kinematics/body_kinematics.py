@@ -6,21 +6,21 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-class JointCenter(IntEnum):
+class BodyModel(IntEnum):
     @property
     def label(self) -> str:
         return self.name.lower()
 
     @staticmethod
-    def from_name(name: str) -> "JointCenter":
-        raise NotImplementedError("This method should be implemented in subclasses of JointCenter")
+    def from_name(name: str) -> "BodyModel":
+        raise NotImplementedError("This method should be implemented in subclasses of BodyModel")
 
     @staticmethod
-    def segment_links(self) -> list[tuple["JointCenter", "JointCenter"]]:
-        raise NotImplementedError("This method should be implemented in subclasses of JointCenter")
+    def segment_links(self) -> list[tuple["BodyModel", "BodyModel"]]:
+        raise NotImplementedError("This method should be implemented in subclasses of BodyModel")
 
 
-class JointCenter18Joints(JointCenter):
+class BodyModel18Joints(BodyModel):
     NOSE = 0
     RIGHT_KNEE = 9
     NECK = 1
@@ -41,35 +41,35 @@ class JointCenter18Joints(JointCenter):
     LEFT_EAR = 17
 
     @staticmethod
-    def from_name(name: str) -> "JointCenter":
-        return JointCenter18Joints[name.upper()]
+    def from_name(name: str) -> "BodyModel":
+        return BodyModel18Joints[name.upper()]
 
     @staticmethod
-    def segment_links() -> list[tuple["JointCenter", "JointCenter"]]:
+    def segment_links() -> list[tuple["BodyModel", "BodyModel"]]:
         # Define the segment links for the 18-joint model
         return [
-            (JointCenter18Joints.NOSE, JointCenter18Joints.NECK),
-            (JointCenter18Joints.NECK, JointCenter18Joints.RIGHT_SHOULDER),
-            (JointCenter18Joints.NECK, JointCenter18Joints.LEFT_SHOULDER),
-            (JointCenter18Joints.RIGHT_SHOULDER, JointCenter18Joints.RIGHT_ELBOW),
-            (JointCenter18Joints.LEFT_SHOULDER, JointCenter18Joints.LEFT_ELBOW),
-            (JointCenter18Joints.RIGHT_ELBOW, JointCenter18Joints.RIGHT_WRIST),
-            (JointCenter18Joints.LEFT_ELBOW, JointCenter18Joints.LEFT_WRIST),
-            (JointCenter18Joints.NECK, JointCenter18Joints.RIGHT_HIP),
-            (JointCenter18Joints.NECK, JointCenter18Joints.LEFT_HIP),
-            (JointCenter18Joints.RIGHT_HIP, JointCenter18Joints.RIGHT_KNEE),
-            (JointCenter18Joints.LEFT_HIP, JointCenter18Joints.LEFT_KNEE),
-            (JointCenter18Joints.RIGHT_KNEE, JointCenter18Joints.RIGHT_ANKLE),
-            (JointCenter18Joints.LEFT_KNEE, JointCenter18Joints.LEFT_ANKLE),
+            (BodyModel18Joints.NOSE, BodyModel18Joints.NECK),
+            (BodyModel18Joints.NECK, BodyModel18Joints.RIGHT_SHOULDER),
+            (BodyModel18Joints.NECK, BodyModel18Joints.LEFT_SHOULDER),
+            (BodyModel18Joints.RIGHT_SHOULDER, BodyModel18Joints.RIGHT_ELBOW),
+            (BodyModel18Joints.LEFT_SHOULDER, BodyModel18Joints.LEFT_ELBOW),
+            (BodyModel18Joints.RIGHT_ELBOW, BodyModel18Joints.RIGHT_WRIST),
+            (BodyModel18Joints.LEFT_ELBOW, BodyModel18Joints.LEFT_WRIST),
+            (BodyModel18Joints.NECK, BodyModel18Joints.RIGHT_HIP),
+            (BodyModel18Joints.NECK, BodyModel18Joints.LEFT_HIP),
+            (BodyModel18Joints.RIGHT_HIP, BodyModel18Joints.RIGHT_KNEE),
+            (BodyModel18Joints.LEFT_HIP, BodyModel18Joints.LEFT_KNEE),
+            (BodyModel18Joints.RIGHT_KNEE, BodyModel18Joints.RIGHT_ANKLE),
+            (BodyModel18Joints.LEFT_KNEE, BodyModel18Joints.LEFT_ANKLE),
         ]
 
 
-JC = TypeVar("JC", bound=JointCenter)
+BodyModelType = TypeVar("BodyModelType", bound=BodyModel)
 
 
 @dataclass(frozen=True)
-class BodyKinematics(Generic[JC]):
-    joint_center_type: type[JC]
+class BodyKinematics(Generic[BodyModelType]):
+    body_model: type[BodyModelType]
     values: NDArray[np.float64]
 
     def __post_init__(self) -> None:
@@ -86,8 +86,8 @@ class BodyKinematics(Generic[JC]):
 
 
 @dataclass(frozen=True)
-class MultiBodyKinematics(BodyKinematics[JC]):
-    joint_center_type: type[JC]
+class MultiBodyKinematics(BodyKinematics[BodyModelType]):
+    body_model: type[BodyModelType]
     values: list[NDArray[np.float64]]
 
     def __post_init__(self) -> None:

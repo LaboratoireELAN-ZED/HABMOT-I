@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, override
 
 import numpy as np
 
-from .body_kinematics import JointCenter, JointCenter18Joints, BodyKinematics, MultiBodyKinematics
+from .body_kinematics import BodyModel, BodyModel18Joints, BodyKinematics, MultiBodyKinematics
 from .body_kinematics_device import BodyKinematicsDevice
 
 if TYPE_CHECKING:
@@ -23,8 +23,8 @@ class ZedDevice(BodyKinematicsDevice):
         self._bodies: "sl._sl.Bodies" = None
 
     @property
-    def joint_center_type(self) -> JointCenter:
-        return JointCenter18Joints
+    def body_model(self) -> BodyModel:
+        return BodyModel18Joints
 
     @override
     def start(self) -> None:
@@ -45,7 +45,7 @@ class ZedDevice(BodyKinematicsDevice):
 
         # Convert the bodies to BodyKinematics
         return MultiBodyKinematics(
-            joint_center_type=self.joint_center_type, values=[body.keypoint for body in self._bodies.body_list]
+            body_model=self.body_model, values=[body.keypoint for body in self._bodies.body_list]
         )
 
     @override
@@ -99,10 +99,10 @@ class ZedDevice(BodyKinematicsDevice):
 
         body_tracking_parameters = self._sl.BodyTrackingParameters()
         body_tracking_parameters.detection_model = self._sl.BODY_TRACKING_MODEL.HUMAN_BODY_ACCURATE
-        if self.joint_center_type == JointCenter18Joints:
+        if self.body_model == BodyModel18Joints:
             body_tracking_parameters.body_format = self._sl.BODY_FORMAT.BODY_18
         else:
-            raise NotImplementedError(f"Unsupported joint center type: {self.joint_center_type}")
+            raise NotImplementedError(f"Unsupported joint center type: {self.body_model}")
         body_tracking_parameters.enable_body_fitting = False
         body_tracking_parameters.enable_tracking = False
 

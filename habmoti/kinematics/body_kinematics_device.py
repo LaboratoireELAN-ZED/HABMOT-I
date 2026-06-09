@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 
-from .body_kinematics import BodyKinematics, JointCenter
+from .body_kinematics import BodyKinematics
 
 
 class BodyKinematicsDevice(ABC):
     @property
     @abstractmethod
-    def joint_center_type(self) -> JointCenter:
+    def body_model(self) -> type:
         """
-        The type of joint centers provided by this device (this must be the same declared in BodyKinematics)
+        The type of body model provided by this device (this must be the same declared in BodyKinematics)
         """
 
     @abstractmethod

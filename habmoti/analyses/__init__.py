@@ -1,12 +1,14 @@
-from .analyzer import Analyzer, AnalyzerList, ToCsvAnalyzer
-from .controller_analyzer import ControllerAnalyzer
+from .analyzer import Analyzer, AnalyzerList
+from .controllers import *
+from .file_io import *
 from .viewers import *
 
-__all__ = viewers.__all__ + [
-    Analyzer.__name__,
-    ControllerAnalyzer.__name__,
-    ToConsoleAnalyzer.__name__,
-    AnalyzerList.__name__,
-    ToCsvAnalyzer.__name__,
-    ToOglAnalyzer.__name__,
-]
+__all__ = (
+    controllers.__all__
+    + file_io.__all__
+    + viewers.__all__
+    + [
+        Analyzer.__name__,
+        AnalyzerList.__name__,
+    ]
+)

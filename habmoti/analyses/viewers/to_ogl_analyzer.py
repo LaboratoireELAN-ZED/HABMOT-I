@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 
 from ..analysis import AnalysesType
 from ..analyzer import Analyzer, FrameData
-from ...kinematics.body_kinematics import BodyKinematics, JointCenter
+from ...kinematics.body_kinematics import BodyKinematics, BodyModel
 
 if TYPE_CHECKING:
     from ...habmoti import Habmoti
@@ -143,7 +143,7 @@ class ToOglAnalyzer(Analyzer):
         self._skeletons.clear()
         # Only show tracked objects
         for id, body in enumerate(body_kinematics.body_list):
-            current_skeleton = _Skeleton(body_kinematics.joint_center_type)
+            current_skeleton = _Skeleton(body_kinematics.body_model)
             current_skeleton.set(id, body)
             self._skeletons.append(current_skeleton)
         self._mutex.release()
@@ -484,8 +484,8 @@ class _Simple3DObject:
 
 
 class _Skeleton:
-    def __init__(self, joint_center_type: JointCenter):
-        self._segment_links = joint_center_type.segment_links()
+    def __init__(self, body_model: BodyModel):
+        self._segment_links = body_model.segment_links()
         self._clr: list[float] = [0.0, 0.0, 0.0, 1.0]
         self._joint_positions: list[np.ndarray] = []
         self._joint_links = _Simple3DObject(False)
