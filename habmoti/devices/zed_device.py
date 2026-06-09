@@ -341,6 +341,8 @@ class MockedZedDevice(ZedDevice):
                 "close": lambda _: None,
                 "_body_format": None,
                 "_camera_index_in_bodylist": None,
+                "_biorbd_model": None,
+                "_current_retrieved_body_frame": 0,
             },
         )()
 
@@ -357,9 +359,33 @@ class MockedZedDevice(ZedDevice):
         while len(bodies.body_list) <= self._camera_index_in_bodylist:
             bodies.body_list.append(None)
 
+        import biorbd
+
         # Add new data
         if self._body_format == MockedZedDevice.BODY_FORMAT.BODY_18:
-            data = type("Body", (), {"keypoint": np.random.rand(18, 3)})()
+            if self._biorbd_model is None:
+                try:
+                    import biorbd
+                except ImportError:
+                    raise ImportError(
+                        "The biorbd module is required to use the MockedZedDevice. You can install it with conda install -c conda-forge biorbd",
+                    )
+                self._biorbd_model = biorbd.Biorbd(str(Path.Path(__file__).parent / "pyomecaman_18_joints.bioMod"))
+
+            q = np.zeros(self._biorbd_model.nb_q)
+            # Place the body in front of the camera
+            q[0:6] = [0.0, 4.0, 0.0, 0.0, 0.0, np.pi]
+            # Simulate a movement of the right shoulder
+            q[9] = np.linspace(0, np.pi, 100)[self._current_retrieved_body_frame % 100]
+            self._current_retrieved_body_frame += 1
+            markers = self._biorbd_model.markers(q)
+
+            keypoints = np.ndarray((18, 3)) * np.nan
+            for marker in markers:
+                index = BodyModel18Joints.from_name(marker.name).value
+                keypoints[index, :] = marker.forward_kinematics()
+            data = type("Body", (), {"keypoint": keypoints})()
+
         else:
             raise NotImplementedError(f"Unsupported body format: {self._body_format}")
         bodies.body_list[self._camera_index_in_bodylist] = data

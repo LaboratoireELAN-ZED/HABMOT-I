@@ -88,9 +88,8 @@ class Habmoti:
                     if self._has_controller:
                         self._to_controller_queue.put(frame_data)
 
-                    # Sleep a bit to avoid overwhelming the queues if the device is very fast
+                    # Rest the CPU a bit to avoid a busy loop when the device is fast (e.g., mocked device or csv reader)
                     time.sleep(0.001)
-
                 except Exception as e:
                     _logger.error("Capture error:", exc_info=e)
 

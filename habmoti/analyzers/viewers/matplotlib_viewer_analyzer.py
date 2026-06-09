@@ -12,6 +12,11 @@ if TYPE_CHECKING:
     from ...data.frame_data import FrameData
 
 
+_INITIAL_CAMERA_ELEV = 90
+_INITIAL_CAMERA_AZIM = 0
+_INITIAL_CAMERA_ROLL = 90
+
+
 @dataclass
 class _BodyArtists:
     scatter: object
@@ -134,12 +139,8 @@ def _build_scene(ax, bodies: list[np.ndarray], segment_links: list[tuple[int, in
     ax.set_zlabel("Z")
     ax.set_title("Body Kinematics")
     ax.grid(True, alpha=0.3)
-
-    x_limits, y_limits, z_limits = fixed_limits
-    ax.set_xlim3d(x_limits)
-    ax.set_ylim3d(y_limits)
-    ax.set_zlim3d(z_limits)
-    ax.set_box_aspect((1.0, 1.0, 1.0))
+    ax.set_aspect("equal")
+    ax.view_init(elev=_INITIAL_CAMERA_ELEV, azim=_INITIAL_CAMERA_AZIM, roll=_INITIAL_CAMERA_ROLL)
 
     handles, labels = ax.get_legend_handles_labels()
     if handles:
