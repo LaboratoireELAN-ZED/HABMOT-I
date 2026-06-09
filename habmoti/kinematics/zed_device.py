@@ -1,12 +1,15 @@
 import pathlib as Path
+import time
 from typing import TYPE_CHECKING, override
 
 import numpy as np
 
-from .body_kinematics import BodyModel, BodyModel18Joints, BodyKinematics, MultiBodyKinematics
 from .body_kinematics_device import BodyKinematicsDevice
+from ..data.body_kinematics import BodyModel18Joints, MultiBodyKinematics
+from ..data.frame_data import FrameData
 
 if TYPE_CHECKING:
+    from ..data.body_kinematics import BodyModel
     import pyzed.sl as sl  # type: ignore
 
 
@@ -23,7 +26,7 @@ class ZedDevice(BodyKinematicsDevice):
         self._bodies: "sl._sl.Bodies" = None
 
     @property
-    def body_model(self) -> BodyModel:
+    def body_model(self) -> type[BodyModel]:
         return BodyModel18Joints
 
     @override
@@ -32,7 +35,7 @@ class ZedDevice(BodyKinematicsDevice):
         self._initialize_body_tracking()
 
     @override
-    def get_current_body_kinematics(self) -> BodyKinematics:
+    def get_current_frame_data(self) -> FrameData | None:
         # Get the bodies for each camera
         for serial in self._senders:
             zed = self._senders[serial]
@@ -43,9 +46,11 @@ class ZedDevice(BodyKinematicsDevice):
         if self._fusion.process() == self._sl.FUSION_ERROR_CODE.SUCCESS:
             self._fusion.retrieve_bodies(self._bodies, self._rt)
 
-        # Convert the bodies to BodyKinematics
-        return MultiBodyKinematics(
-            body_model=self.body_model, values=[body.keypoint for body in self._bodies.body_list]
+        return FrameData(
+            timestamp=int(self._fusion.get_timestamp()),
+            body_kinematics=MultiBodyKinematics(
+                body_model=self.body_model, values=[body.keypoint for body in self._bodies.body_list]
+            ),
         )
 
     @override
@@ -222,10 +227,8 @@ class MockedZedDevice(ZedDevice):
         self.unit = None
 
     @override
-    def get_current_body_kinematics(self) -> BodyKinematics:
+    def get_current_frame_data(self) -> FrameData | None:
         # Make sure data are not feed over the maximum fps of the device
-        import time
-
         lag_dt = 0.0
         if self._max_fps_lag > 0:
             import random
@@ -237,7 +240,7 @@ class MockedZedDevice(ZedDevice):
             time.sleep(self._dt - (current_time - self._previous_capture_time) + lag_dt)
         self._previous_capture_time = time.time()
 
-        return super().get_current_body_kinematics()
+        return super().get_current_frame_data()
 
     # Mocker of the sl module
     COORDINATE_SYSTEM = type("COORDINATE_SYSTEM", (), {"RIGHT_HANDED_Y_UP": 0})
@@ -387,6 +390,7 @@ class MockedZedDevice(ZedDevice):
                 "enable_body_tracking": lambda _, __: None,
                 "process": lambda _: MockedZedDevice.FUSION_ERROR_CODE.SUCCESS,
                 "retrieve_bodies": lambda _, bodies, __: None,
+                "get_timestamp": lambda _: int(time.time() * 1000),
             },
         )()
 

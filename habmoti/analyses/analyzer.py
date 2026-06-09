@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import override, TYPE_CHECKING
 
-from ..data.frame_data import FrameData
-
 if TYPE_CHECKING:
+    from ..data.frame_data import FrameData
     from ..habmoti import Habmoti
 
 

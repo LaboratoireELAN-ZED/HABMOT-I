@@ -1,10 +1,11 @@
+from datetime import datetime
 from typing import override, TYPE_CHECKING
 
-from ..analyzer import Analyzer, FrameData
-from ...kinematics.body_kinematics import BodyModel
+from ..analyzer import Analyzer
 
 if TYPE_CHECKING:
-    from ...habmoti import Habmoti
+    from ...data.body_kinematics import BodyModel
+    from ...habmoti import Habmoti, FrameData
 
 
 class ToConsoleAnalyzer(Analyzer):
@@ -19,12 +20,8 @@ class ToConsoleAnalyzer(Analyzer):
 
     @override
     def perform(self, frame_data: FrameData) -> None:
-        import datetime
-
-        timestamp = frame_data.timestamp
-        timestamp_as_date = datetime.datetime.fromtimestamp(timestamp / 1000.0)
-
-        print(f"At {timestamp_as_date}, received: {frame_data.body_kinematics.joint_centers[self._joint_center]}")
+        timestamp = datetime.fromtimestamp(frame_data.timestamp / 1000.0)
+        print(f"At {timestamp}, received: {frame_data.body_kinematics.joint_centers[self._joint_center]}")
 
     @override
     def stop(self) -> None:

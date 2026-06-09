@@ -3,7 +3,7 @@ from typing import Any
 
 
 class AnalysesType(Enum):
-    STOP_RECORDING = auto()
+    pass
 
 
 class Analysis:

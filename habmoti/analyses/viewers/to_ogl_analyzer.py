@@ -7,11 +7,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..analysis import AnalysesType
-from ..analyzer import Analyzer, FrameData
-from ...kinematics.body_kinematics import BodyKinematics, BodyModel
+from ..analyzer import Analyzer
 
 if TYPE_CHECKING:
-    from ...habmoti import Habmoti
+    from ..analyzer import Habmoti, FrameData
+    from ...data.body_kinematics import BodyKinematics, BodyModel
 
 _M_PI = 3.1415926
 
@@ -23,6 +23,7 @@ class ToOglAnalyzer(Analyzer):
 
     def __init__(self):
         self._is_started = False
+        self._habmoti: Habmoti | None = None
 
         self._skeletons: list[_Skeleton] = []
         self._mutex = Lock()
@@ -41,6 +42,8 @@ class ToOglAnalyzer(Analyzer):
 
     @override
     def start(self, habmoti: Habmoti):
+        self._habmoti = habmoti
+
         _OGL.glut.glutInit()
         wnd_w = _OGL.glut.glutGet(_OGL.glut.GLUT_SCREEN_WIDTH)
         wnd_h = _OGL.glut.glutGet(_OGL.glut.GLUT_SCREEN_HEIGHT)
@@ -98,9 +101,12 @@ class ToOglAnalyzer(Analyzer):
         if self._is_started:
             self._update_bodies(frame_data.body_kinematics)
             _OGL.glut.glutMainLoopEvent()
-        frame_data.analysis.current[AnalysesType.STOP_RECORDING] = not self._is_started
 
+    @override
     def stop(self):
+        if self._habmoti is not None:
+            self._habmoti.stop()
+        self._habmoti = None
         if self._is_started:
             self._is_started = False
 
@@ -136,16 +142,17 @@ class ToOglAnalyzer(Analyzer):
         self._projection.append(-1)
         self._projection.append(0)
 
-    def _update_bodies(self, body_kinematics: BodyKinematics):  # _objs of type sl.Bodies
+    def _update_bodies(self, body_kinematics: BodyKinematics | None):  # _objs of type sl.Bodies
         self._mutex.acquire()
 
         # Clear objects
         self._skeletons.clear()
         # Only show tracked objects
-        for id, body in enumerate(body_kinematics.body_list):
-            current_skeleton = _Skeleton(body_kinematics.body_model)
-            current_skeleton.set(id, body)
-            self._skeletons.append(current_skeleton)
+        if body_kinematics is not None:
+            for id, body in enumerate(body_kinematics.body_list):
+                current_skeleton = _Skeleton(body_kinematics.body_model)
+                current_skeleton.set(id, body)
+                self._skeletons.append(current_skeleton)
         self._mutex.release()
 
     def _idle(self):

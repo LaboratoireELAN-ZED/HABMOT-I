@@ -8,20 +8,24 @@ from habmoti import (
     BodyKinematicsDevice,
     ZedDevice,
     MockedZedDevice,
+    CsvReaderDevice,
+    Controller,
+    ControllerList,
     Analyzer,
     AnalyzerList,
     ToConsoleAnalyzer,
     ToCsvAnalyzer,
     ToOglAnalyzer,
-    ControllerAnalyzer,
+    StopDataCollectionController,
 )
 
 
 def main():
     device = _select_device()
     analyzers = _select_analyzers(device=device)
+    controllers = _select_controller()
 
-    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzers)
+    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzers, controller=controllers)
     habmoti.start()
 
 
@@ -30,13 +34,16 @@ def _select_device() -> BodyKinematicsDevice:
     if device_type is None:
         raise ValueError("Environment variable 'HABMOTI_DEVICE_TYPE' is not set")
 
-    if device_type == "mocked_zed":
+    if device_type == "zed":
+        parameters = json.loads(os.getenv("HABMOTI_ZED_PARAMETERS", "{}"))
+        device = ZedDevice(**parameters)
+    elif device_type == "mocked_zed":
         zed_parameters = json.loads(os.getenv("HABMOTI_ZED_PARAMETERS", "{}"))
         mock_parameters = json.loads(os.getenv("HABMOTI_MOCKED_ZED_PARAMETERS", "{}"))
         device = MockedZedDevice(**mock_parameters | zed_parameters)
-    elif device_type == "zed":
-        parameters = json.loads(os.getenv("HABMOTI_ZED_PARAMETERS", "{}"))
-        device = ZedDevice(**parameters)
+    elif device_type == "csv_reader":
+        parameters = json.loads(os.getenv("HABMOTI_CSV_READER_PARAMETERS", "{}"))
+        device = CsvReaderDevice(**parameters)
     else:
         raise NotImplementedError(f"Unsupported device type: {device_type}")
     return device
@@ -64,8 +71,13 @@ def _select_analyzers(device: BodyKinematicsDevice) -> Analyzer:
         else:
             raise NotImplementedError(f"Unsupported analyzer type: {analyzer}")
 
-    analyzers.append(ControllerAnalyzer(**json.loads(os.getenv("HABMOTI_CONTROLLER", "{}"))))
     return analyzers
+
+
+def _select_controller() -> Controller:
+    controllers = ControllerList()
+    controllers.append(StopDataCollectionController(**json.loads(os.getenv("HABMOTI_STOP_CONTROLLER", "{}"))))
+    return controllers
 
 
 if __name__ == "__main__":
