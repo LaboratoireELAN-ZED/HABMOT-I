@@ -10,6 +10,8 @@
 The main resources should be from the *stereolabs* in priority (and probably solely): 
 https://www.stereolabs.com/docs
 
+WARNING: Using documentation from nvidia official website (or other official resources) will probably results in the Target being in a failing state. In case of emergency (e.g. Target won't turn on anymore), flashing Target (see [Initialization of Target](#initialization-of-target) below) should work. 
+
 
 ## Initialization of Target
 
@@ -26,6 +28,7 @@ sudo apt install qemu-user-static binfmt-support
 sudo update-binfmts --enable  
 ```
 
+
 ### USB in the docker
 Contrary to what the documentation mentions, you need to actively pass the USB to the docker. The command to launch the docker should therefore be the following (note that this command assumes that the Host is under Linux):
 ```bash
@@ -39,7 +42,8 @@ If you get the mention that the USB is not optimal, there are potentially severa
 - Bad USB port generation (confirmed). Solution: a USB-C to USB-C cable guarantees that the ports are compliant.
 
 
-## Updating Target drivers
+## Installing/updating Target drivers
+As stated before, the main 
 
 1. ZED SDK should first be installed
 2. ZED Tools should then be installed
