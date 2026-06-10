@@ -25,6 +25,8 @@ class Habmoti:
         self._to_analyzer_queue = queue.Queue()
         self._to_controller_queue = queue.Queue()
 
+        self._analyzers_ready_event = threading.Event()
+        self._controllers_ready_event = threading.Event()
         self._stop_event = threading.Event()
         self._capture_is_over_event = threading.Event()
 
@@ -33,16 +35,24 @@ class Habmoti:
         Start the pipeline threads.
         """
 
+        self._analyzers_ready_event.clear()
+        self._controllers_ready_event.clear()
         self._stop_event.clear()
         self._capture_is_over_event.clear()
 
         # Start the pipeline and their associated threads
         self._device.start()
         self.threads = [threading.Thread(target=self._capture_loop, daemon=False)]
+
         if self._has_analyzer:
             self.threads.append(threading.Thread(target=self._run_analysis_loop, daemon=False))
+        else:
+            self._analyzers_ready_event.set()
+
         if self._has_controller:
             self.threads.append(threading.Thread(target=self._run_controller_loop, daemon=False))
+        else:
+            self._controllers_ready_event.set()
 
         for t in self.threads:
             t.start()
@@ -79,6 +89,9 @@ class Habmoti:
         Capture loop: continuously capture data from the device and put it in the queue.
         """
         try:
+            while not self._analyzers_ready_event.is_set() or not self._controllers_ready_event.is_set():
+                time.sleep(0.1)
+
             while not self._stop_event.is_set():
                 try:
                     frame_data = self._device.get_current_frame_data()
@@ -108,6 +121,7 @@ class Habmoti:
 
         try:
             self._analyzer.start(habmoti=self)
+            self._analyzers_ready_event.set()
             self._analysis_loop()
         except Exception as e:
             _logger.error("Analyzer loop error:", exc_info=e)
@@ -136,6 +150,7 @@ class Habmoti:
 
         try:
             self._controller.start(habmoti=self)
+            self._controllers_ready_event.set()
             self._controller_loop()
         except Exception as e:
             _logger.error("Controller loop error:", exc_info=e)

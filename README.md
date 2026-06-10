@@ -67,6 +67,11 @@ This variable defines the configuration of the `to_console` analyzer and consist
 ### HABMOTI_TO_CSV_ANALYZER_PARAMETERS
 This variable defines the configuration of the `to_csv` analyzer and consists of JSON formatted string. It must contain the following keys:
 - `filepath`: The path to the output CSV file.
+- `frame_per_second`: The target fps to stream the data, as integer. 
+    - `null` is as fast as possible
+    - A negative value targets to replicate the original frame rate
+    - Zero (0) is on a frame by frame basis (i.e. pressing enter between each frame)
+    - A positive value is a fixed value
 
 ### HABMOTI_STOP_CONTROLLER
 This variable defines the stopping criteria of the main loop and consists of JSON formatted string. It must contain the following keys:

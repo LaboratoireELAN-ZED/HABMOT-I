@@ -14,7 +14,7 @@ from habmoti import (
     Analyzer,
     AnalyzerList,
     ToConsoleAnalyzer,
-    MatplotlibViewerAnalyzer,
+    ToMatplotlibAnalyzer,
     ToCsvAnalyzer,
     ToOglAnalyzer,
     StopDataCollectionController,
@@ -70,7 +70,7 @@ def _select_analyzers(device: Device) -> Analyzer:
         elif analyzer == "to_ogl":
             analyzers.append(ToOglAnalyzer())
         elif analyzer == "to_matplotlib":
-            analyzers.append(MatplotlibViewerAnalyzer())
+            analyzers.append(ToMatplotlibAnalyzer())
         else:
             raise NotImplementedError(f"Unsupported analyzer type: {analyzer}")
 

@@ -1,9 +1,10 @@
 import datetime
 import pathlib as Path
-from time import sleep
+import time
 from typing import override, TYPE_CHECKING
 
 import numpy as np
+from numpy.typing import NDArray
 from packaging import version as version_checker
 
 from .device import Device
@@ -17,29 +18,51 @@ if TYPE_CHECKING:
 
 
 class CsvReaderDevice(Device):
-    def __init__(self, filepath: Path, frame_by_frame: bool = False):
+    def __init__(self, filepath: Path, frame_per_second: int | None = None):
+        """
+        Reading a file and streaming the data as if it was a device
+
+        Args:
+            filepath: The path of the file to read
+            frame_per_second: The target fps to stream the data, as integer.
+                - None is as fast as possible
+                - A negative value targets to replicate the original frame rate
+                - Zero (0) is on a frame by frame basis (i.e. pressing enter between each frame)
+                - A positive value is a fixed value
+        """
+
         self._filepath = filepath
-        self._frame_by_frame = frame_by_frame
+        self._frame_per_second = frame_per_second
         self._parse_header()
-        self._data = None
-        self._current_index = None
+        self._data: NDArray[np.float64] = None
+        self._current_index: int = None
+        self._previous_frame_time: time.time = None
 
     @override
     def start(self) -> None:
         self._data = np.genfromtxt(self._filepath, delimiter=",", skip_header=self._header_len + 1)
         self._data = self._data[1:]  # Remove the header row (all nans)
         self._current_index = -1
+        self._previous_frame_time = time.time()
 
     @override
     def get_current_frame_data(self) -> FrameData | None:
         self._current_index += 1
         if self._current_index >= self._data.shape[0]:
             return None
-        if self._frame_by_frame:
+
+        if self._frame_per_second is None:
+            pass  # Serve data as fast as possible
+        elif self._frame_per_second == 0:
             input("Press Enter to continue to the next frame...")
+        elif self._frame_per_second < 0:
+            idx = self._current_index
+            self._delay_frame(delta_time=0 if idx < 1 else ((self._data[idx, 0] - self._data[idx - 1, 0]) / 1000))
+        else:
+            self._delay_frame(delta_time=1 / self._frame_per_second)
 
         return FrameData(
-            timestamp=int(self._data[self._current_index, 0]),
+            timestamp=time.time() * 1000,  #  int(self._data[self._current_index, 0]),
             body_kinematics=BodyKinematics(
                 body_model=self.body_model,
                 values=self._data[self._current_index, 1:].reshape(-1, 3),
@@ -50,6 +73,7 @@ class CsvReaderDevice(Device):
     def stop(self) -> None:
         self._data = None
         self._current_index = None
+        self._previous_frame_time = None
 
     def _parse_header(self) -> list[str]:
         header = []
@@ -85,6 +109,14 @@ class CsvReaderDevice(Device):
         self._file_type: str = parsers["file_type"][0]
         self._habmoti_version: str = parsers["habmoti_version"][0]
         self._csv_version: str = parsers["csv_version"][0]
+
+    def _delay_frame(self, delta_time: float):
+        current_time = time.time()
+        time_to_sleep = (self._previous_frame_time + delta_time) - current_time
+        self._previous_frame_time = current_time
+        if time_to_sleep > 0:
+            time.sleep(time_to_sleep)
+            self._previous_frame_time += time_to_sleep
 
     @property
     def date(self) -> datetime.datetime:

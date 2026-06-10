@@ -1,5 +1,6 @@
-from multiprocessing import Event, Process, Queue
 from dataclasses import dataclass
+from multiprocessing import Event, Process, Queue
+import time
 from queue import Empty, Full
 from typing import TYPE_CHECKING, override
 
@@ -30,7 +31,7 @@ class _SceneArtists:
     segment_links: list[tuple[int, int]]
 
 
-def _matplotlib_viewer_process(data_queue, stop_event) -> None:
+def _matplotlib_viewer_process(data_queue, is_ready_event, stop_event) -> None:
     import matplotlib.pyplot as plt
 
     fig = plt.figure()
@@ -42,6 +43,7 @@ def _matplotlib_viewer_process(data_queue, stop_event) -> None:
     latest_bodies: list[np.ndarray] = []
     latest_segment_links: list[tuple[int, int]] = []
     scene: _SceneArtists | None = None
+    is_ready_event.set()
 
     while not stop_event.is_set():
         has_new_payload = False
@@ -99,7 +101,7 @@ def _build_scene(ax, bodies: list[np.ndarray], segment_links: list[tuple[int, in
         if values.ndim != 2 or values.shape[1] < 3:
             continue
 
-        clr = MatplotlibViewerAnalyzer._generate_color_id(body_index)
+        clr = ToMatplotlibAnalyzer._generate_color_id(body_index)
 
         finite_mask = np.all(np.isfinite(values[:, :3]), axis=1)
         points = values[finite_mask]
@@ -154,7 +156,7 @@ def _update_scene(scene: _SceneArtists, bodies: list[np.ndarray]) -> None:
         if values.ndim != 2 or values.shape[1] < 3:
             continue
 
-        clr = MatplotlibViewerAnalyzer._generate_color_id(body_index)
+        clr = ToMatplotlibAnalyzer._generate_color_id(body_index)
 
         finite_mask = np.all(np.isfinite(values[:, :3]), axis=1)
         points = values[finite_mask]
@@ -216,7 +218,7 @@ def _compute_equal_limits(
     )
 
 
-class MatplotlibViewerAnalyzer(Analyzer):
+class ToMatplotlibAnalyzer(Analyzer):
     """Render body kinematics in a live 3D Matplotlib view."""
 
     def __init__(self):
@@ -243,14 +245,17 @@ class MatplotlibViewerAnalyzer(Analyzer):
         self._habmoti = habmoti
         self._is_started = True
         self._stop_notified = False
+        self._viewer_is_ready_event = Event()
         self._viewer_stop_event = Event()
         self._viewer_queue = Queue(maxsize=1)
         self._viewer_process = Process(
             target=_matplotlib_viewer_process,
-            args=(self._viewer_queue, self._viewer_stop_event),
+            args=(self._viewer_queue, self._viewer_is_ready_event, self._viewer_stop_event),
             daemon=True,
         )
         self._viewer_process.start()
+        while not self._viewer_is_ready_event.is_set():
+            time.sleep(0.01)
 
     @override
     def perform(self, frame_data: FrameData) -> None:
@@ -316,6 +321,6 @@ class MatplotlibViewerAnalyzer(Analyzer):
 
     @staticmethod
     def _generate_color_id(idx: int) -> tuple[float, float, float]:
-        clr = np.divide(MatplotlibViewerAnalyzer._generate_color_id_u(idx), 255.0)
+        clr = np.divide(ToMatplotlibAnalyzer._generate_color_id_u(idx), 255.0)
         clr[0], clr[2] = clr[2], clr[0]
         return float(clr[0]), float(clr[1]), float(clr[2])
