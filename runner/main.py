@@ -1,10 +1,10 @@
 from time import sleep
 
-from habmoti import InterfaceFormEnvironment
+from habmoti import InterfaceCli
 
 
 def main():
-    InterfaceFormEnvironment().exec()
+    InterfaceCli().exec()
 
 
 if __name__ == "__main__":

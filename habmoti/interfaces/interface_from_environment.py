@@ -13,7 +13,7 @@ from ..devices.zed_device import ZedDevice, MockedZedDevice
 from ..habmoti import Habmoti
 
 
-class InterfaceFormEnvironment:
+class InterfaceFromEnvironment:
     """
     Class representing the environment of an interface form.
     """

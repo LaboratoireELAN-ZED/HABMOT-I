@@ -1,7 +1,7 @@
-from .interface_from_environment import InterfaceFormEnvironment
+from .interface_from_environment import InterfaceFromEnvironment
 from .interface_cli import InterfaceCli
 
 __all__ = [
-    InterfaceFormEnvironment.__name__,
+    InterfaceFromEnvironment.__name__,
     InterfaceCli.__name__,
 ]

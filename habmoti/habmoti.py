@@ -13,12 +13,13 @@ _logger = logging.getLogger(__name__)
 class Habmoti:
     def __init__(
         self,
-        device: Device,
+        device: Device | None = None,
         analyzer: Analyzer | None = None,
     ):
         self._device = device
         self._analyzer = analyzer
 
+        self._started = False
         self._threads: list[threading.Thread] = [
             threading.Thread(target=self._run_capture_loop, daemon=False),
             threading.Thread(target=self._run_analysis_loop, daemon=False),
@@ -33,6 +34,8 @@ class Habmoti:
         """
         Start the pipeline threads.
         """
+        if self._device is None:
+            raise ValueError("No device set. Please set a device before starting the pipeline.")
 
         self._analyzer_ready_event.clear()
         self._capture_has_ended_event.clear()
@@ -41,6 +44,7 @@ class Habmoti:
         for t in self._threads:
             t.start()
 
+        self._started = True
         if blocking:
             self._join()
 
@@ -60,6 +64,14 @@ class Habmoti:
     @property
     def device(self) -> Device:
         return self._device
+
+    @device.setter
+    def device(self, device: Device) -> None:
+        if self._started:
+            raise RuntimeError(
+                "Cannot change device while the pipeline is running. Please stop the pipeline before changing the device."
+            )
+        self._device = device
 
     @property
     def analyzer(self) -> Analyzer:
@@ -115,6 +127,10 @@ class Habmoti:
             except Exception as e:
                 _logger.error("Capture error:", exc_info=e)
 
+        # Wait until the analyzer queue is empty before setting started to False
+        self._to_analyzer_queue.join()
+        self._started = False
+
     @property
     def _has_analyzer(self) -> bool:
         return self._analyzer is not None
@@ -147,5 +163,9 @@ class Habmoti:
                 if frame_data is None:
                     continue
                 self._analyzer.perform(frame_data)
+
             except queue.Empty:
                 continue
+
+            finally:
+                self._to_analyzer_queue.task_done()
