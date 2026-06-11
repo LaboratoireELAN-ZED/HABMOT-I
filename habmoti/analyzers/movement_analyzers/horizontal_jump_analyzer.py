@@ -12,6 +12,7 @@ class JumpEvent:
     start_frame: int
     end_frame: int
 
+
 class HorizontalJumpAnalyzer(Analyzer):
     def __init__(self):
         super().__init__()
@@ -20,7 +21,7 @@ class HorizontalJumpAnalyzer(Analyzer):
         self.jump_end_frames: list[int] | None = None
 
     @override
-    def start(self, habmoti: Habmoti) -> None:
+    def initialize(self, habmoti: Habmoti) -> None:
         pass
 
     @override
@@ -28,5 +29,5 @@ class HorizontalJumpAnalyzer(Analyzer):
         pass
 
     @override
-    def stop(self) -> None:
+    def dispose(self) -> None:
         pass

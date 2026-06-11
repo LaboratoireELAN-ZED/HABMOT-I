@@ -230,7 +230,7 @@ class ToMatplotlibAnalyzer(Analyzer):
         self._stop_notified = False
 
     @override
-    def start(self, habmoti: Habmoti) -> None:
+    def initialize(self, habmoti: Habmoti) -> None:
         try:
             import matplotlib.pyplot as plt
         except ImportError as e:
@@ -295,7 +295,7 @@ class ToMatplotlibAnalyzer(Analyzer):
             pass
 
     @override
-    def stop(self) -> None:
+    def dispose(self) -> None:
         self._is_started = False
         self._habmoti = None
         self._stop_notified = False

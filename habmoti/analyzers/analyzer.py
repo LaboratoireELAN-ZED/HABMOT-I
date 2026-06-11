@@ -8,9 +8,9 @@ if TYPE_CHECKING:
 
 class Analyzer(ABC):
     @abstractmethod
-    def start(self, habmoti: Habmoti) -> None:
+    def initialize(self, habmoti: Habmoti) -> None:
         """
-        Start the analyzer. This is called before the first frame is analyzed.
+        Initialize the analyzer. This is called before the first frame is analyzed.
         """
 
     @abstractmethod
@@ -23,9 +23,11 @@ class Analyzer(ABC):
         """
 
     @abstractmethod
-    def stop(self) -> None:
+    def dispose(self) -> None:
         """
-        Stop the analyzer. This is called when the analyzer is no longer needed.
+        Dispose the analyzer. This is called when the analyzer is no longer needed.
+        The perform should not be called after this method is called. However, the initialize method may be called
+        again to re-initialize the analyzer.
         """
 
 
@@ -40,10 +42,10 @@ class AnalyzerList(Analyzer):
         self._analyzers.append(analyzer)
 
     @override
-    def start(self, habmoti: Habmoti) -> None:
+    def initialize(self, habmoti: Habmoti) -> None:
         self._is_locked = True
         for analyzer in self._analyzers:
-            analyzer.start(habmoti=habmoti)
+            analyzer.initialize(habmoti=habmoti)
 
     @override
     def perform(self, frame_data: FrameData) -> None:
@@ -51,7 +53,7 @@ class AnalyzerList(Analyzer):
             analyzer.perform(frame_data)
 
     @override
-    def stop(self) -> None:
+    def dispose(self) -> None:
         for analyzer in self._analyzers:
-            analyzer.stop()
+            analyzer.dispose()
         self._is_locked = False

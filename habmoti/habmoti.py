@@ -142,13 +142,14 @@ class Habmoti:
             return
 
         try:
-            self._analyzer.start(habmoti=self)
-            self._analyzers_ready_event.set()
+            self._analyzer.initialize(habmoti=self)
+            self._analyzer_ready_event.set()
             self._analysis_loop()
         except Exception as e:
-            _logger.error("Stopping data capture as analyzer failed:", exc_info=e)
+            _logger.error("Analyzer failed, stopping data capture. Stack trace:\n", exc_info=e)
             self.stop()
-            return
+        finally:
+            self._analyzer.dispose()
 
     def _analysis_loop(self) -> None:
         """

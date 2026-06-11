@@ -15,7 +15,7 @@ class ToConsoleAnalyzer(Analyzer):
         super().__init__()
 
     @override
-    def start(self, habmoti: Habmoti) -> None:
+    def initialize(self, habmoti: Habmoti) -> None:
         pass
 
     @override
@@ -24,5 +24,5 @@ class ToConsoleAnalyzer(Analyzer):
         print(f"At {timestamp}, received: {frame_data.body_kinematics.joint_centers[self._joint_center]}")
 
     @override
-    def stop(self) -> None:
+    def dispose(self) -> None:
         pass

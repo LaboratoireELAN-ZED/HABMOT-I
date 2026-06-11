@@ -41,7 +41,7 @@ class ToOglAnalyzer(Analyzer):
         self._shader_sphere_pt = None
 
     @override
-    def start(self, habmoti: Habmoti):
+    def initialize(self, habmoti: Habmoti):
         self._habmoti = habmoti
 
         _OGL.glut.glutInit()
@@ -93,7 +93,7 @@ class ToOglAnalyzer(Analyzer):
 
         _OGL.glut.glutKeyboardFunc(self._key_pessed_callback)
         # Register the closing function
-        _OGL.glut.glutCloseFunc(self.stop)
+        _OGL.glut.glutCloseFunc(self.dispose)
 
         self._is_started = True
 
@@ -104,7 +104,7 @@ class ToOglAnalyzer(Analyzer):
             _OGL.glut.glutMainLoopEvent()
 
     @override
-    def stop(self):
+    def dispose(self):
         if self._habmoti is not None:
             self._habmoti.stop()
         self._habmoti = None
@@ -162,7 +162,7 @@ class ToOglAnalyzer(Analyzer):
 
     def _key_pessed_callback(self, key, x, y):
         if ord(key) == 113 or ord(key) == 27:
-            self.stop()
+            self.dispose()
 
     def _draw_callback(self):
         if self._is_started:
