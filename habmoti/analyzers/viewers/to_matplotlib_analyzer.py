@@ -229,6 +229,11 @@ class ToMatplotlibAnalyzer(Analyzer):
         self._viewer_queue: Queue | None = None
         self._stop_notified = False
 
+    @property
+    @override
+    def name(self) -> str:
+        return "Matplotlib Viewer"
+
     @override
     def initialize(self, habmoti: Habmoti) -> None:
         try:

@@ -40,6 +40,11 @@ class ToOglAnalyzer(Analyzer):
         self._shader_sphere_color = None
         self._shader_sphere_pt = None
 
+    @property
+    @override
+    def name(self) -> str:
+        return "OpenGL Viewer"
+
     @override
     def initialize(self, habmoti: Habmoti):
         self._habmoti = habmoti

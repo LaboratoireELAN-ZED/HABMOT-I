@@ -75,11 +75,23 @@ class Habmoti:
             raise RuntimeError(
                 "Cannot change device while the pipeline is running. Please stop the pipeline before changing the device."
             )
+        if self._analyzer is not None:
+            raise RuntimeError(
+                "Cannot change device while an analyzer is set. Please remove the analyzer or stop the pipeline before changing the device."
+            )
         self._device = device
 
     @property
     def analyzer(self) -> Analyzer:
         return self._analyzer
+
+    @analyzer.setter
+    def analyzer(self, analyzer: Analyzer | None) -> None:
+        if self._is_started:
+            raise RuntimeError(
+                "Cannot change analyzer while the pipeline is running. Please stop the pipeline before changing the analyzer."
+            )
+        self._analyzer = analyzer
 
     def _run_capture_loop(self) -> None:
         """

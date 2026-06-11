@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 
 from ..analyzers.analyzer import Analyzer, AnalyzerList
-from ..analyzers.viewers.to_console_analyzer import ToConsoleAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
 from ..analyzers.viewers.to_ogl_analyzer import ToOglAnalyzer
+from ..analyzers.writers.to_console_analyzer import ToConsoleAnalyzer
 from ..analyzers.writers.to_csv_analyzer import ToCsvAnalyzer
 from ..devices.device import Device
 from ..devices.csv_reader_device import CsvReaderDevice

@@ -14,6 +14,11 @@ class ToConsoleAnalyzer(Analyzer):
 
         super().__init__()
 
+    @property
+    @override
+    def name(self) -> str:
+        return f"Console Viewer ({self._joint_center.name})"
+
     @override
     def initialize(self, habmoti: Habmoti) -> None:
         pass

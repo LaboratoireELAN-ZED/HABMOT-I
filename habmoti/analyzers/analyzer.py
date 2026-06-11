@@ -7,6 +7,13 @@ if TYPE_CHECKING:
 
 
 class Analyzer(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """
+        The name of the analyzer. This is used for display purposes and should be unique among analyzers.
+        """
+
     @abstractmethod
     def initialize(self, habmoti: Habmoti) -> None:
         """
@@ -36,6 +43,11 @@ class AnalyzerList(Analyzer):
         self._analyzers = analyzers if analyzers is not None else []
         self._is_locked = False
 
+    @property
+    @override
+    def name(self):
+        return "List of analyzers"
+
     def append(self, analyzer: Analyzer) -> None:
         if self._is_locked:
             raise RuntimeError("Cannot append an analyzer to a locked AnalyzerList")
@@ -57,3 +69,17 @@ class AnalyzerList(Analyzer):
         for analyzer in self._analyzers:
             analyzer.dispose()
         self._is_locked = False
+
+    def __len__(self):
+        return len(self._analyzers)
+
+    def __getitem__(self, index):
+        return self._analyzers[index]
+
+    def __delitem__(self, key):
+        if self._is_locked:
+            raise RuntimeError("Cannot delete an analyzer from a locked AnalyzerList")
+        del self._analyzers[key]
+
+    def __iter__(self):
+        return iter(self._analyzers)
