@@ -204,7 +204,7 @@ class ZedDevice(Device):
         self._bodies = self._sl.Bodies()
 
 
-class MockedZedDevice(ZedDevice):
+class ZedMockDevice(ZedDevice):
     def __init__(
         self,
         target_fps: int = 60,
@@ -229,7 +229,7 @@ class MockedZedDevice(ZedDevice):
     @property
     @override
     def name(self) -> str:
-        return "ZED (Mocked) Camera"
+        return "ZED (Mock) Camera"
 
     @override
     def _load_module(self):
@@ -299,8 +299,8 @@ class MockedZedDevice(ZedDevice):
             (),
             {
                 "serial_number": None,
-                "communication_parameters": MockedZedDevice.CommunicationParameters(),
-                "input_type": MockedZedDevice.InputType(),
+                "communication_parameters": ZedMockDevice.CommunicationParameters(),
+                "input_type": ZedMockDevice.InputType(),
                 "pose": None,
             },
         )()
@@ -312,7 +312,7 @@ class MockedZedDevice(ZedDevice):
             (),
             {
                 "set_for_shared_memory": lambda _: None,
-                "comm_type": MockedZedDevice.COMM_TYPE.INTRA_PROCESS,
+                "comm_type": ZedMockDevice.COMM_TYPE.INTRA_PROCESS,
             },
         )()
 
@@ -343,12 +343,12 @@ class MockedZedDevice(ZedDevice):
             "Camera",
             (),
             {
-                "open": lambda _, __: MockedZedDevice.ERROR_CODE.SUCCESS,
-                "enable_positional_tracking": lambda _, __: MockedZedDevice.ERROR_CODE.SUCCESS,
-                "enable_body_tracking": MockedZedDevice._setup_body_tracking,
+                "open": lambda _, __: ZedMockDevice.ERROR_CODE.SUCCESS,
+                "enable_positional_tracking": lambda _, __: ZedMockDevice.ERROR_CODE.SUCCESS,
+                "enable_body_tracking": ZedMockDevice._setup_body_tracking,
                 "start_publishing": lambda _, __: None,
-                "grab": lambda _: MockedZedDevice.ERROR_CODE.SUCCESS,
-                "retrieve_bodies": MockedZedDevice._retrieve_bodies,
+                "grab": lambda _: ZedMockDevice.ERROR_CODE.SUCCESS,
+                "retrieve_bodies": ZedMockDevice._retrieve_bodies,
                 "close": lambda _: None,
                 "_body_format": None,
                 "_camera_index_in_bodylist": None,
@@ -360,7 +360,7 @@ class MockedZedDevice(ZedDevice):
     @staticmethod
     def _setup_body_tracking(self, parameters):
         self._body_format = parameters.body_format
-        return MockedZedDevice.ERROR_CODE.SUCCESS
+        return ZedMockDevice.ERROR_CODE.SUCCESS
 
     @staticmethod
     def _retrieve_bodies(self, bodies):
@@ -373,13 +373,13 @@ class MockedZedDevice(ZedDevice):
         import biorbd
 
         # Add new data
-        if self._body_format == MockedZedDevice.BODY_FORMAT.BODY_18:
+        if self._body_format == ZedMockDevice.BODY_FORMAT.BODY_18:
             if self._biorbd_model is None:
                 try:
                     import biorbd
                 except ImportError:
                     raise ImportError(
-                        "The biorbd module is required to use the MockedZedDevice. You can install it with conda install -c conda-forge biorbd",
+                        "The biorbd module is required to use the ZedMockDevice. You can install it with conda install -c conda-forge biorbd",
                     )
                 self._biorbd_model = biorbd.Biorbd(str(Path.Path(__file__).parent / "pyomecaman_18_joints.bioMod"))
 
@@ -401,7 +401,7 @@ class MockedZedDevice(ZedDevice):
             raise NotImplementedError(f"Unsupported body format: {self._body_format}")
         bodies.body_list[self._camera_index_in_bodylist] = data
 
-        return MockedZedDevice.ERROR_CODE.SUCCESS
+        return ZedMockDevice.ERROR_CODE.SUCCESS
 
     @staticmethod
     def InitFusionParameters():
@@ -423,11 +423,11 @@ class MockedZedDevice(ZedDevice):
             (),
             {
                 "init": lambda _, __: None,
-                "subscribe": lambda _, __, ___, ____: MockedZedDevice.ERROR_CODE.SUCCESS,
+                "subscribe": lambda _, __, ___, ____: ZedMockDevice.ERROR_CODE.SUCCESS,
                 "enable_body_tracking": lambda _, __: None,
-                "process": lambda _: MockedZedDevice.FUSION_ERROR_CODE.SUCCESS,
+                "process": lambda _: ZedMockDevice.FUSION_ERROR_CODE.SUCCESS,
                 "retrieve_bodies": lambda _, bodies, __: None,
-                "get_current_timestamp": lambda _: type("Timestamp", (), {"data_ns": int(time.time() * 1000)})(),
+                "get_current_timestamp": lambda _: type("Timestamp", (), {"data_ns": int(time.time() * 1000 * 1000)})(),
             },
         )()
 

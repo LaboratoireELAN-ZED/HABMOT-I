@@ -1,0 +1,30 @@
+{
+    "device": {
+        "name": "zed",
+        "parameters": {
+            "configuration_filepath": "<PATH_TO_ZED_CONFIG>"
+        }
+    },
+    "analyzers": [
+        {
+            "name": "to_console",
+            "parameters": {
+                "joint_center": "<NAME_OF_JOINT_TO_USE_AS_CENTER>",
+            }
+        }, 
+        {
+            "name": "to_matplotlib"
+        },
+        {
+            "name": "to_ogl"
+        },
+        {
+            "name": "to_csv",
+            "parameters": {
+                "filepath": "<PATH_TO_CSV_FILE>",
+                "auto_increment": < [true] | false >,
+                "allow_overwrite": < true | [false] >
+            }
+        }
+    ]
+}

@@ -1,5 +1,5 @@
 import datetime
-import pathlib as Path
+from pathlib import Path
 import time
 from typing import override, TYPE_CHECKING
 
@@ -31,13 +31,16 @@ class CsvReaderDevice(Device):
                 - A positive value is a fixed value
         """
 
-        self._filepath = filepath
+        self._filepath = Path(filepath)
         if self._filepath.suffix != "" and self._filepath.suffix != ".csv":
             raise ValueError("The filepath must have a .csv extension (or left empty)")
         self._filepath = self._filepath.with_suffix(".csv")
 
         self._frame_per_second = frame_per_second
-        self._parse_header()
+        try:
+            self._parse_header()
+        except Exception as e:
+            raise ValueError(f"Failed to parse the header of the CSV file: {e}")
         self._data: NDArray[np.float64] = None
         self._current_index: int = None
         self._previous_frame_time: time.time = None

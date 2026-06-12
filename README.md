@@ -4,9 +4,9 @@
 Assuming the dedicated conda environment is installed and activated, to setup the project, run the following command in the terminal:
 
 ```bash
-pip install -e .[zed_mocker,gui_opengl,gui_matplotlib]
+pip install -e .[zed_mock,gui_opengl,gui_matplotlib]
 ```
-The `[zed_mocker]` part of the command is optional and is only required if one wants to use the `mocked_zed` device. Additionnally, if one wants to use the `mocked_zed` device, they must also manually install the `biorbd` library as it is not available on pip. 
+The `[zed_mock]` part of the command is optional and is only required if one wants to use the `zed_mock` device. Additionnally, if one wants to use the `zed_mock` device, they must also manually install the `biorbd` library as it is not available on pip. 
 
 The `[gui_opengl]` part of the command is optional and is only required to run the `to_ogl` option of the analyzers. 
 
@@ -29,8 +29,8 @@ This variable defines what device to use to capture the motion data and consists
 
 - `zed`: Use the ZED camera to capture motion data. 
     - This requires the [HABMOTI_ZED_PARAMETERS](#habmoti_zed_parameters) environment variable to be set.
-- `mocked_zed`: Use mocked data that simulates the ZED camera output. 
-    - This requires the [HABMOTI_ZED_PARAMETERS](#habmoti_zed_parameters) and the  [HABMOTI_MOCKED_ZED_PARAMETERS](#habmoti_mocked_zed_parameters) environment variable to be set.
+- `zed_mock`: Use mocked data that simulates the ZED camera output. 
+    - This requires the [HABMOTI_ZED_PARAMETERS](#habmoti_zed_parameters) and the  [HABMOTI_ZED_MOCK_PARAMETERS](#habmoti_zed_mock_parameters) environment variable to be set.
     - Note, this requires the `biorbd` library to be installed. 
 - `csv_reader`: Use a CSV file as the source of motion data. 
     - This requires the [HABMOTI_CSV_READER_PARAMETERS](#habmoti_csv_reader_parameters) environment variable to be set.  
@@ -40,14 +40,19 @@ This variable defines what device to use to capture the motion data and consists
 This variable defines the configuration of the ZED device and consists of JSON formatted string. It must contain the following keys:
 - `configuration_filepath`: The path to the ZED configuration file (see the installation available at http://github.com/laboratoireELAN-ZED/Documentation)
 
-### HABMOTI_MOCKED_ZED_PARAMETERS
-This variable defines the configuration of the mocked ZED device and consists of JSON formatted string. It must contain the following keys:
+### HABMOTI_ZED_MOCK_PARAMETERS
+This variable defines the configuration of the ZED mock device and consists of JSON formatted string. It must contain the following keys:
 - `target_fps`: The target frames per second to simulate as an integer (e.g. 30)
 - `max_fps_lag_ms`: The maximum lag to simulate inconsistencies in the frame rate in milliseconds to simulate as an integer. Please note, on Windows, target_fps will not be perfectly respected anyway, so this parameter does not make much of a difference. 
 
 ### HABMOTI_CSV_READER_PARAMETERS
 This variable defines the configuration of the CSV reader device and consists of JSON formatted string. It must contain the following keys:
 - `filepath`: The path to the input CSV file. The CSV file must be created from the `to_csv` analyzer or follow the same format.
+- `frame_per_second`: The target fps to stream the data, as integer. 
+    - `null` is as fast as possible
+    - A negative value targets to replicate the original frame rate
+    - Zero (0) is on a frame by frame basis (i.e. pressing enter between each frame)
+    - A positive value is a fixed value
 
 ### HABMOTI_ANALYZERS
 This variable defines the analyzers to use and consists of a list of comma-separated strings surrounded by square brackets. Each string must be one of the following values:
@@ -67,13 +72,124 @@ This variable defines the configuration of the `to_console` analyzer and consist
 ### HABMOTI_TO_CSV_ANALYZER_PARAMETERS
 This variable defines the configuration of the `to_csv` analyzer and consists of JSON formatted string. It must contain the following keys:
 - `filepath`: The path to the output CSV file.
-- `frame_per_second`: The target fps to stream the data, as integer. 
-    - `null` is as fast as possible
-    - A negative value targets to replicate the original frame rate
-    - Zero (0) is on a frame by frame basis (i.e. pressing enter between each frame)
-    - A positive value is a fixed value
+- `auto_increment`: Whether to automatically increment the filename if the file already exists as a boolean. If set to `true`, the filename will be automatically incremented (e.g. `output_1.csv`, `output_2.csv`, etc.) if the file already exists. If set to `false` or omitted, the file will be overwritten if it already exists.
+- `allow_overwrite`: Whether to allow overwriting the file if it already exists as a boolean. If set to `true`, the file will be overwritten if it already exists. If set to `false` or omitted, the file will not be overwritten if it already exists and an error will be raised. Please note that if `auto_increment` is set to `true`, the `allow_overwrite` parameter will be ignored as the file will never be overwritten.
 
 ### HABMOTI_STOP_CONTROLLER
 This variable defines the stopping criteria of the main loop and consists of JSON formatted string. It must contain the following keys:
 - `max_runtime`: The maximum runtime of the main loop in seconds as an integer. If set to `null` or omitted, the main loop will run indefinitely.
 - `stop_if_data_runs_out`: Whether to stop the main loop if the device runs out of data to provide as a boolean. If set to `true`, the main loop will stop if the device runs out of data to provide. If set to `false` or omitted, the main loop will continue running even if the device runs out of data to provide.
+
+## Running the CLI
+The code that can be run is the `main_cli.py` file located in the root directory of the project. From the `runner` directory, run the following command in the terminal:
+```bash
+python main_cli.py
+```
+
+A menu will be displayed in the terminal to select the device and analyzers to use. 
+
+A json file can be loaded to pre-fill the menu options. To do so, select the `load` option, then enter the path to the json file. 
+
+### JSON configuration file
+Examples of JSON configuration files can be found in the `templates` directory.
+
+The JSON configuration is as follows:
+
+```json
+{
+    "device": {
+        "name": "<DEVICE_NAME>",
+        "parameters": {
+            // Device-specific parameters
+        }
+    },
+    "analyzers": [
+        {
+            "name": "<FIRST_ANALYZER_NAME>",
+            "parameters": {
+                // Analyzer-specific parameters
+            }
+        }, 
+        {
+            "name": "<SECOND_ANALYZER_NAME>",
+            "parameters": {
+                // Analyzer-specific parameters
+            }
+        },
+        ...
+        {
+            "name": "<LAST_ANALYZER_NAME>",
+            "parameters": {
+                // Analyzer-specific parameters
+            }
+        }
+    ]
+}
+```
+Where:
+- `<DEVICE_NAME>` is the name of the device to use, which must be one of the following values:
+    - `zed` ([parameters](#device-zed-parameters))
+    - `zed_mock` ([parameters](#device-zed-mock-parameters))
+    - `csv_reader` ([parameters](#device-csv-reader-parameters))
+- `<ANALYZER_NAME>`
+    - `to_console` ([parameters](#analyzer-to_console-parameters))
+    - `to_csv` ([parameters](#analyzer-to_csv-parameters))
+    - `to_ogl` (no parameters)
+    - `to_matplotlib` (no parameters)
+
+#### Device Zed parameters
+The parameters for the `zed` device are as follows:
+```json
+{
+    "configuration_filepath": "<PATH_TO_ZED_CONFIG>"
+}
+```
+
+#### Device Zed Mock parameters
+The parameters for the `zed_mock` device are as follows:
+```json
+{
+    "configuration_filepath": "<PATH_TO_ZED_CONFIG>",
+    "target_fps": <TARGET_FPS>,
+    "max_fps_lag_ms": <MAX_FPS_LAG_MS>
+}
+```
+where `<TARGET_FPS>` is the target frames per second to simulate as an integer (e.g. 30) and `<MAX_FPS_LAG_MS>` is the maximum lag to simulate inconsistencies in the frame rate in milliseconds to simulate as an integer. Please note, on Windows, target_fps will not be perfectly respected anyway, so this parameter does not make much of a difference.
+
+#### Device CSV Reader parameters
+The parameters for the `csv_reader` device are as follows:
+```json
+{
+    "filepath": "<PATH_TO_CSV_FILE>",
+    "frame_per_second": <FRAME_PER_SECOND>
+}
+```
+where `<FRAME_PER_SECOND>` can be:
+- `null` for as fast as possible
+- A negative value to replicate the original frame rate
+- Zero (0) for a frame by frame basis (i.e. pressing enter between each frame)
+- A positive value for a fixed value
+
+#### Analyzer to_console parameters
+The parameters for the `to_console` analyzer are as follows:
+```json
+{
+    "joint_center": "<JOINT_CENTER_NAME>"
+}
+```
+where `<JOINT_CENTER_NAME>` is the degree of freedom to print the value of in the console as a string. The valid values depend on the model used.
+
+#### Analyzer to_csv parameters
+
+The parameters for the `to_csv` analyzer are as follows:
+```json
+{
+    "filepath": "<PATH_TO_CSV_FILE>",
+    "auto_increment": <AUTO_INCREMENT>,
+    "allow_overwrite": <ALLOW_OVERWRITE>
+}
+```
+where `<AUTO_INCREMENT>` is a boolean that indicates whether to automatically increment the filename if the file already exists. If set to `true`, the filename will be automatically incremented (e.g. `output_1.csv`, `output_2.csv`, etc.) if the file already exists. If set to `false` or omitted, the file will be overwritten if it already exists. 
+
+`<ALLOW_OVERWRITE>` is a boolean that indicates whether to allow overwriting the file if it already exists. If set to `true`, the file will be overwritten if it already exists. If set to `false` or omitted, the file will not be overwritten if it already exists and an error will be raised. Please note that if `auto_increment` is set to `true`, the `allow_overwrite` parameter will be ignored as the file will never be overwritten.
+

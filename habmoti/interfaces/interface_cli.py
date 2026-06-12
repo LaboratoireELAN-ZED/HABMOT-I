@@ -1,12 +1,14 @@
+import json
 from pathlib import Path
 
+from .utils import habmoti_from_dict
 from ..analyzers.analyzer import AnalyzerList
 from ..analyzers.writers.to_console_analyzer import ToConsoleAnalyzer
 from ..analyzers.writers.to_csv_analyzer import ToCsvAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
 from ..analyzers.viewers.to_ogl_analyzer import ToOglAnalyzer
 from ..devices.device import Device
-from ..devices.zed_device import ZedDevice, MockedZedDevice
+from ..devices.zed_device import ZedDevice, ZedMockDevice
 from ..devices.csv_reader_device import CsvReaderDevice
 from ..habmoti import Habmoti
 
@@ -49,18 +51,26 @@ class InterfaceCli:
 
             if not commands:
                 continue
-            elif commands[0] == "quit":
-                print("Exiting the HABMOT-I CLI. Goodbye!")
-                break
+            elif commands[0] in ["help", "h"]:
+                self._handle_help_command()
+            elif commands[0] == "load":
+                self._handle_load_command(commands[1:])
             elif commands[0] == "device":
                 self._handle_device_command(commands[1:], [commands[0]])
             elif commands[0] == "analyzer":
                 self._handle_analyzer_command(commands[1:], [commands[0]])
             elif commands[0] == "controller":
                 self._handle_controller_command(commands[1:], [commands[0]])
-            elif commands[0] in ["help", "h"]:
-                print("""  Available commands:
+            elif commands[0] == "quit":
+                self._handle_quit_command()
+                break
+            else:
+                print(f"  Unknown command: {commands[0]}. Type 'help' for a list of commands.")
+
+    def _handle_help_command(self):
+        print("""  Available commands:
     help,h     - Show this help message
+    load       - Load a configuration from a JSON file. This will remove the current device and analyzer.
     device     - Manage devices (type 'device help' for more information)
     analyzer   - Manage analyzers (type 'analyzer help' for more information)
     controller - Start the HABMOT-I system
@@ -68,8 +78,47 @@ class InterfaceCli:
     
     When navigating through subcommands, you can usually type 'help' for more information on the subcommands and also type"
     'list' to see available options. To go back to the previous menu, leave the input empty or type 'back'.""")
-            else:
-                print(f"  Unknown command: {commands[0]}. Type 'help' for a list of commands.")
+
+    def _handle_quit_command(self):
+        print("Exiting the HABMOT-I CLI. Goodbye!")
+
+    def _handle_load_command(self, parameters: list[str]):
+        analyzers = self._habmoti.analyzer
+        if analyzers is not None and not isinstance(analyzers, AnalyzerList):
+            raise ValueError(
+                "Analyzer should be an AnalyzerList to use multiple analyzers. "
+                "This should not happen, you are invited to contact the developers."
+            )
+        if self._habmoti.device is not None or (analyzers is not None and len(analyzers) > 0):
+            response = (
+                input(
+                    "  Loading a configuration will remove the current device and analyzer. Do you want to continue?  (y/N) "
+                )
+                .strip()
+                .lower()
+            )
+            if response != "y":
+                return
+
+        parameters = _fill_parameters(all_keys=["filepath"], parameters=parameters)
+        filepath = _input_if_not_in_parameters(
+            parameters,
+            key="filepath",
+            prompt="Path of the configuration file to load (leave empty to cancel)",
+            value_type=str,
+        )
+        if not filepath:
+            return
+        try:
+            with open(filepath, "r") as f:
+                config = json.load(f)
+
+            self._habmoti.analyzer = None
+            habmoti_from_dict(self._habmoti, config)
+
+            print(f"  Configuration loaded from {filepath}.")
+        except Exception as e:
+            print(f"  Failed to load configuration: {e}")
 
     @navigable_menu
     def _handle_device_command(self, commands: list[str], previous_commands: list[str]) -> bool:
@@ -99,7 +148,7 @@ class InterfaceCli:
     def _handle_device_list_command(self):
         print("""  Available devices:
     zed - ZED camera
-    zed_mocked - ZED (Mocked) camera
+    zed_mock - ZED (Mock) camera
     csv_reader - CSV reader""")
 
     def _handle_device_add_command(self, commands: list[str], previous_commands: list[str] = []):
@@ -128,7 +177,7 @@ class InterfaceCli:
         try:
             if commands[0] in ["list", "ls", "help", "h"]:
                 self._handle_device_list_command()
-            elif commands[0] == "zed" or commands[0] == "zed_mocked":
+            elif commands[0] == "zed" or commands[0] == "zed_mock":
                 self._handle_device_add_zed_command(device_name=commands[0], parameters=commands[1:])
                 ignore_has_navigated = True
             elif commands[0] == "csv_reader":
@@ -147,13 +196,13 @@ class InterfaceCli:
         self._habmoti.analyzer = AnalyzerList()
 
     def _handle_device_add_zed_command(self, device_name: str, parameters: list[str]):
-        is_mock = device_name == "zed_mocked"
+        is_mock = device_name == "zed_mock"
 
         parameters = _fill_parameters(
             all_keys=["filepath"] + (["fps", "max_lag"] if is_mock else []), parameters=parameters
         )
 
-        config_path = _get_if_not_in_parameters(
+        config_path = _input_if_not_in_parameters(
             parameters,
             key="filepath",
             prompt="A configuration file is required to use the ZED camera. If not done already, you can create one by using the ZED360 tool.\n  Path of the file",
@@ -161,25 +210,25 @@ class InterfaceCli:
             value_type=str,
         )
         if is_mock:
-            target_fps = _get_if_not_in_parameters(
+            target_fps = _input_if_not_in_parameters(
                 parameters, key="fps", prompt="Target FPS", default=30, value_type=int
             )
-            max_fps_lag_ms = _get_if_not_in_parameters(
+            max_fps_lag_ms = _input_if_not_in_parameters(
                 parameters, key="max_lag", prompt="Max FPS lag in ms", default=0, value_type=int
             )
 
             self._safe_device_add(
-                device=MockedZedDevice(
+                device=ZedMockDevice(
                     configuration_filepath=config_path, target_fps=target_fps, max_fps_lag_ms=max_fps_lag_ms
                 )
             )
         else:
             self._safe_device_add(device=ZedDevice(configuration_filepath=config_path))
-        print(f"  ZED{' (Mocked)' if is_mock else ''} camera added.")
+        print(f"  ZED{' (Mock)' if is_mock else ''} camera added.")
 
     def _handle_device_add_csv_reader_command(self, parameters: list[str]):
         parameters = _fill_parameters(all_keys=["filepath"], parameters=parameters)
-        filepath = _get_if_not_in_parameters(
+        filepath = _input_if_not_in_parameters(
             parameters,
             key="filepath",
             prompt="Path of the CSV file to read (leave empty to cancel)",
@@ -286,19 +335,21 @@ class InterfaceCli:
 
     def _handle_add_console_command(self, parameters: list[str]):
         parameters = _fill_parameters(all_keys=["joint"], parameters=parameters)
-        joint_center_name = _get_if_not_in_parameters(
+        joint_center = _input_if_not_in_parameters(
             parameters,
             key="joint",
             prompt="Joint center name (leave empty to cancel)",
             value_type=str,
         )
-        if not joint_center_name:
+        if not joint_center:
             return
 
         try:
-            joint_center = self._habmoti.device.body_model.from_name(joint_center_name)
+            # Test if it is going to fail later, so fail now
+            self._habmoti.device.body_model.from_name(joint_center)
         except:
-            raise ValueError(f"Invalid joint center name: {joint_center_name}")
+            raise ValueError(f"Invalid joint center name: {joint_center}")
+
         self._habmoti.analyzer.append(ToConsoleAnalyzer(joint_center=joint_center))
         print(f"  Added a console writer.")
 
@@ -343,7 +394,7 @@ class InterfaceCli:
 
     def _handle_add_csv_command(self, parameters: list[str]):
         parameters = _fill_parameters(all_keys=["filepath"], parameters=parameters)
-        filepath = _get_if_not_in_parameters(
+        filepath = _input_if_not_in_parameters(
             parameters,
             key="filepath",
             prompt="CSV file path (leave empty to cancel)",
@@ -357,14 +408,14 @@ class InterfaceCli:
         except:
             raise ValueError(f"Invalid CSV file path: {filepath}")
 
-        auto_increment = _get_if_not_in_parameters(
+        auto_increment = _input_if_not_in_parameters(
             parameters,
             key="auto_increment",
             prompt="Automatically increment filename if it already exists? (y/N)",
             default="y",
             value_type=lambda x: x.strip().lower() == "y",
         )
-        allow_overwrite = _get_if_not_in_parameters(
+        allow_overwrite = _input_if_not_in_parameters(
             parameters,
             key="allow_overwrite",
             prompt="Allow overwriting existing files? (y/N)",
@@ -463,7 +514,7 @@ def _fill_parameters(all_keys: list[str], parameters: list[str]):
     }
 
 
-def _get_if_not_in_parameters(parameters: dict, key: str, prompt: str, default=None, value_type=str):
+def _input_if_not_in_parameters(parameters: dict, key: str, prompt: str, default=None, value_type=str):
     if key in parameters and parameters[key]:
         return value_type(parameters[key])
     else:

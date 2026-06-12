@@ -56,6 +56,7 @@ class Habmoti:
         for t in self._threads:
             t.start()
 
+        self._analyzer_ready_event.wait()
         self._is_initialized = True
 
     def exec(self) -> None:

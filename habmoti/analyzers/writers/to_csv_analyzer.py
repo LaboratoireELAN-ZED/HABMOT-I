@@ -26,7 +26,7 @@ class ToCsvAnalyzer(DataWriterAnalyzer):
             allow_overwrite: Whether to allow overwriting existing files. Ignored if [auto_increment] is True as it already prevents overwriting.
         """
 
-        self._filepath = filepath
+        self._filepath = Path(filepath)
         self._auto_increment = auto_increment
         self._allow_overwrite = allow_overwrite
         if not self._allow_overwrite and not self._auto_increment and self._filepath.exists():
@@ -105,7 +105,7 @@ class ToCsvAnalyzer(DataWriterAnalyzer):
     @override
     def stop_trial(self) -> None:
         if not self.is_writing:
-            raise RuntimeError("Cannot stop writing as it is not currently writing")
+            return
 
         with self._writing_mutex:
             self._stop_trial()

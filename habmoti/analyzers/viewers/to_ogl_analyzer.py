@@ -32,6 +32,7 @@ class ToOglAnalyzer(DataViewerAnalyzer):
         self._basic_sphere = _Simple3DObject(True)
 
         # Prepare internal elements
+        self._window_id = None
         self._shader_sk_image: _Shader = None
         self._shader_sk_mvp = None
         self._shader_sk_color = None
@@ -59,7 +60,7 @@ class ToOglAnalyzer(DataViewerAnalyzer):
         # The window opens at the upper left corner of the screen
         _OGL.glut.glutInitWindowPosition(int(wnd_w * 0.05), int(wnd_h * 0.05))
         _OGL.glut.glutInitDisplayMode(_OGL.glut.GLUT_DOUBLE | _OGL.glut.GLUT_SRGB)
-        _OGL.glut.glutCreateWindow(b"ZED Fusion Body Tracking")
+        self._window_id = _OGL.glut.glutCreateWindow(b"ZED Fusion Body Tracking")
         _OGL.gl.glViewport(0, 0, width, height)
 
         _OGL.glut.glutSetOption(_OGL.glut.GLUT_ACTION_ON_WINDOW_CLOSE, _OGL.glut.GLUT_ACTION_CONTINUE_EXECUTION)
@@ -106,7 +107,7 @@ class ToOglAnalyzer(DataViewerAnalyzer):
     def perform(self, frame_data: FrameData) -> None:
         if self._is_started:
             self._update_bodies(frame_data.body_kinematics)
-            _OGL.glut.glutMainLoopEvent()
+        _OGL.glut.glutMainLoopEvent()
 
     @override
     def dispose(self):
@@ -115,6 +116,11 @@ class ToOglAnalyzer(DataViewerAnalyzer):
         self._habmoti = None
         if self._is_started:
             self._is_started = False
+        # Close the current window
+        if self._window_id is not None:
+            _OGL.glut.glutDestroyWindow(self._window_id)
+            _OGL.glut.glutMainLoopEvent()
+            self._window_id = None
 
     def _set_render_camera_projection(self, fov, _znear, _zfar):
         # Just slightly move up the ZED camera FOV to make a small black border

@@ -9,19 +9,27 @@ if TYPE_CHECKING:
 
 
 class ToConsoleAnalyzer(DataWriterAnalyzer):
-    def __init__(self, joint_center: BodyModel):
-        self._joint_center = joint_center
+    def __init__(self, joint_center: str):
+        """
+        Analyzer that writes the value of a specific joint center to the console.
+
+        Args:
+            joint_center: The name of the joint center to write to the console. Must be a valid joint center name for the
+            body model used by the device.
+        """
+        self._joint_center_name = joint_center
+        self._joint_center = None
 
         super().__init__()
 
     @property
     @override
     def name(self) -> str:
-        return f"Console Writer ({self._joint_center.name})"
+        return f"Console Writer ({self._joint_center_name})"
 
     @override
     def initialize(self, habmoti: Habmoti) -> None:
-        pass
+        self._joint_center = habmoti._device.body_model.from_name(self._joint_center_name)
 
     @override
     def perform(self, frame_data: FrameData) -> None:
@@ -30,4 +38,4 @@ class ToConsoleAnalyzer(DataWriterAnalyzer):
 
     @override
     def dispose(self) -> None:
-        pass
+        self._joint_center = None

@@ -28,7 +28,7 @@ dependencies = [
 test = [
     "pytest",
 ]
-zed_mocker = [
+zed_mock = [
     # "biorbd",  # Not available on pip, so it must be installed manually and not listed as a dependency
 ]
 gui_opengl = [
