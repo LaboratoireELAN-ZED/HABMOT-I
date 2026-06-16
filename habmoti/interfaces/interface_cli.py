@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from .utils import habmoti_from_dict
@@ -12,6 +13,8 @@ from ..devices.device import Device
 from ..devices.zed_device import ZedDevice, ZedMockDevice
 from ..devices.csv_reader_device import CsvReaderDevice
 from ..habmoti import Habmoti
+
+_logger = logging.getLogger(__name__)
 
 
 def navigable_menu(func):
@@ -68,7 +71,7 @@ class InterfaceCli:
                 break
             else:
                 print(f"  Unknown command: {commands[0]}. Type 'help' for a list of commands.")
-        
+
         self._handle_controller_command(["terminate"], previous_commands=["controller"])
 
     def exec_from_config(self, config_filepath: str):
@@ -77,11 +80,12 @@ class InterfaceCli:
             # The error message is already printed in _handle_load_command, so we just exit silently here
             return
         if self._habmoti.device is None:
-            raise ValueError("No device configured. Please configure a device in the configuration file, or use 'exec' to start the CLI.")
-        
+            raise ValueError(
+                "No device configured. Please configure a device in the configuration file, or use 'exec' to start the CLI."
+            )
+
         self._handle_controller_command(["initialize"], previous_commands=["controller"])
         self._habmoti.exec()
-
 
     def _handle_help_command(self):
         print("""  Available commands:
@@ -138,10 +142,10 @@ class InterfaceCli:
             self._habmoti.analyzer = None
             habmoti_from_dict(self._habmoti, config)
 
-            print(f"  Configuration loaded from {filepath}.")
+            _logger.info(f"  Configuration loaded from {filepath}.")
             return True
         except Exception as e:
-            print(f"  Failed to load configuration: {e}")
+            _logger.error(f"  Failed to load configuration: {e}")
             return False
 
     @navigable_menu

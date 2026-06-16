@@ -6,9 +6,9 @@ from numpy.typing import NDArray
 
 from ..utils.maths import create_system_of_axes, AxisName
 
-type point_type = list[int]
-type axis_type = tuple[point_type, point_type]
-type coordinate_system_type = tuple[axis_type, tuple[axis_type, AxisName], tuple[axis_type, AxisName], AxisName]
+type PointType = list[int]
+type AxisType = tuple[PointType, PointType]
+type CoordinateSystemType = tuple[AxisType, tuple[AxisType, AxisName], tuple[AxisType, AxisName], AxisName]
 
 
 class BodyModel(IntEnum):
@@ -25,7 +25,7 @@ class BodyModel(IntEnum):
         raise NotImplementedError("This method should be implemented in subclasses of BodyModel")
 
     @staticmethod
-    def body_coordinate_systems_indices() -> coordinate_system_type:
+    def body_coordinate_systems_indices() -> CoordinateSystemType:
         raise NotImplementedError("This method should be implemented in subclasses of BodyModel")
 
 
@@ -73,7 +73,7 @@ class BodyModel18Joints(BodyModel):
         ]
 
     @staticmethod
-    def body_coordinate_systems_indices() -> coordinate_system_type:
+    def body_coordinate_systems_indices() -> CoordinateSystemType:
         origin = [BodyModel18Joints.NECK, BodyModel18Joints.RIGHT_HIP, BodyModel18Joints.LEFT_HIP]
         first_axis = [[BodyModel18Joints.RIGHT_HIP], [BodyModel18Joints.LEFT_HIP]]
         second_axis = [origin, [BodyModel18Joints.NECK]]
@@ -108,7 +108,7 @@ class BodyKinematics(Generic[BodyModelType]):
         return [self._values]
 
     @property
-    def body_coordinate_system(self) -> list[coordinate_system_type]:
+    def body_coordinate_system(self) -> list[CoordinateSystemType]:
         origin_indices, first_axis, second_axis, keep_axis = self._body_model.body_coordinate_systems_indices()
         first_axis_indices, first_axis_name = first_axis
         second_axis_indices, second_axis_name = second_axis
@@ -159,5 +159,5 @@ class MultiBodyKinematics(BodyKinematics[BodyModelType]):
         return self._values
 
     @property
-    def body_coordinate_system(self) -> list[coordinate_system_type]:
+    def body_coordinate_system(self) -> list[CoordinateSystemType]:
         raise NotImplementedError("Body coordinate systems are not implemented for MultiBodyKinematics yet")
