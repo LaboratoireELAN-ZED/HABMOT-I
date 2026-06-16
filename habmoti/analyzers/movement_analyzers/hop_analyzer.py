@@ -15,6 +15,13 @@ class HabmotCriteriaHop:
     can_do_four_consecutive_jumps: bool = False
     non_hopping_leg_remains_behind: bool = False
 
+    def __str__(self) -> str:
+        return f"""#####################
+Hop analysis results:
+  Can do four consecutive jumps: {self.can_do_four_consecutive_jumps}
+  Non-hopping leg remains behind: {self.non_hopping_leg_remains_behind}
+#####################"""
+
 
 class HopAnalyzer(DataMovementAnalyzer):
     def __init__(self):
@@ -50,14 +57,7 @@ class HopAnalyzer(DataMovementAnalyzer):
         self._criteria.non_hopping_leg_remains_behind = is_success
 
         # Print the results to the console
-        _logger.info("#####################")
-        _logger.info("Hop analysis results:")
-        _logger.info(f"Prefered jumper foot: {prefered_ground_foot}")
-        _logger.info(
-            f"Can do four consecutive jumps: {self._criteria.can_do_four_consecutive_jumps} (achieved {best_consecutive_jumps} consecutive jumps)"
-        )
-        _logger.info(f"Non-hopping leg remains behind: {self._criteria.non_hopping_leg_remains_behind}")
-        _logger.info("#####################")
+        _logger.info(f"\n{self._criteria}")
 
         if show_debug_graphs:
             self._show_data(blocking=False, jump_indices=jump_indices)

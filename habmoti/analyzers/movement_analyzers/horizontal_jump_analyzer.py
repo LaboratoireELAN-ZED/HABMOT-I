@@ -14,6 +14,12 @@ _logger = logging.getLogger(__name__)
 class HabmotCriteriaHorizontalJump:
     feet_are_together: bool = False
 
+    def __str__(self) -> str:
+        return f"""#####################
+Horizontal jump analysis results:
+  Feet are together: {self.feet_are_together}
+#####################"""
+
 
 class HorizontalJumpAnalyzer(DataMovementAnalyzer):
     def __init__(self):
@@ -45,10 +51,8 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         self._criteria.feet_are_together = is_success
 
         # Print the results to the console
-        _logger.info("#####################")
-        _logger.info("Horizontal jump analysis results:")
-        _logger.info(f"Feet are together: {self._criteria.feet_are_together}")
-        _logger.info("#####################")
+        _logger.info(f"\n{self._criteria}")
+
         if show_debug_graphs:
             self._show_data(blocking=False, jump_indices=jump_indices)
 
