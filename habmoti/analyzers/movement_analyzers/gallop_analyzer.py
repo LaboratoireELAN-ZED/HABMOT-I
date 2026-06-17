@@ -24,7 +24,7 @@ class HabmotCriteriaGallop:
 Gallop analysis results:
   1. Arms flex and swing forward: {self.arms_flex_and_swing_forward}
   2. Lagging foot is behind on landing: {self.lagging_foot_is_behind_on_landing}
-  3. Both feed come off the surface: {self.is_jumping}
+  3. Both feet come off the surface: {self.is_jumping}
   4. Can maintain a rhythmic pattern four consecutive gallops: {self.can_do_four_consecutive_gallops}
 #####################"""
 

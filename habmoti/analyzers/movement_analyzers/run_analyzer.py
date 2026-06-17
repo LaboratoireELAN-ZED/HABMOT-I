@@ -14,10 +14,17 @@ _logger = logging.getLogger(__name__)
 
 @dataclass
 class HabmotCriteriaRun:
+    are_arms_legs_opposition: bool = False
+    is_jumping: bool = False
+    non_support_leg_is_flexed: bool = False
 
     def __str__(self) -> str:
         return f"""#####################
 Run analysis results:
+  1. Arms and legs are in opposition: {self.are_arms_legs_opposition}
+  2. Both feet come off the surface: {self.is_jumping}
+  3. Narrow foot placement: IMPOSSIBLE TO ASSESS WITH CURRENT DATA
+  4. Non-support leg is flexed: {self.non_support_leg_is_flexed}
 #####################"""
 
 
@@ -48,6 +55,14 @@ class RunAnalyzer(DataMovementAnalyzer):
         jump_indices = compute_jump_indices(body_model=self._habmoti.device.body_model, frames=self._data_centered)
 
         # Proceed to the analyses
+        is_success = self._compute_are_arms_legs_opposition(jump_indices)
+        self._criteria.are_arms_legs_opposition = is_success
+
+        is_success = self._compute_is_jumping(jump_indices)
+        self._criteria.is_jumping = is_success
+
+        is_success = self._compute_is_non_support_leg_flexed(jump_indices)
+        self._criteria.non_support_leg_is_flexed = is_success
 
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
@@ -59,6 +74,65 @@ class RunAnalyzer(DataMovementAnalyzer):
     def dispose(self) -> None:
         self._criteria = None
         super().dispose()
+
+    def _compute_are_arms_legs_opposition(self, jump_indices: tuple[JumpIndices]) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        mid_jump = [jump[1] for jump in jump_indices]
+
+        index_of = lambda name: self._habmoti.device.body_model.from_name(name)
+        wrist, knee = 0, 1
+        joints = ["wrist", "knee"]
+        left_data = joint_centers[:, [index_of(f"left_{name}") for name in joints], :]
+        right_data = joint_centers[:, [index_of(f"right_{name}") for name in joints], :]
+
+        is_left_arm_front = (
+            left_data[mid_jump, wrist, Axes.FRONTAL.value] < right_data[mid_jump, wrist, Axes.FRONTAL.value]
+        )
+        is_left_leg_front = (
+            left_data[mid_jump, knee, Axes.FRONTAL.value] < right_data[mid_jump, knee, Axes.FRONTAL.value]
+        )
+        arms_are_opposite_to_legs = is_left_arm_front != is_left_leg_front
+
+        return arms_are_opposite_to_legs.all()
+
+    def _compute_is_jumping(self, jump_indices: tuple[JumpIndices]) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        mid_jump = [jump[1] for jump in jump_indices]
+        left_foot = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), Axes.VERTICAL.value]
+        right_foot = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), Axes.VERTICAL.value]
+
+        threshold = 0.1  # 10 cm
+        left_foot_is_off_ground = left_foot[mid_jump] > threshold
+        right_foot_is_off_ground = right_foot[mid_jump] > threshold
+
+        return (left_foot_is_off_ground & right_foot_is_off_ground).all()
+
+    def _compute_is_non_support_leg_flexed(self, jump_indices: tuple[JumpIndices]) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        mid_jump = np.array([jump[1] for jump in jump_indices])
+
+        index_of = lambda name: self._habmoti.device.body_model.from_name(name)
+        knee, hip, ankle = 0, 1, 2
+        joints = ["knee", "hip", "ankle"]
+        left_data = joint_centers[:, [index_of(f"left_{name}") for name in joints], :]
+        right_data = joint_centers[:, [index_of(f"right_{name}") for name in joints], :]
+
+        def leg_is_flexed(data: np.ndarray, instant: list[int]) -> npt.NDArray[np.bool_]:
+            target = 90 * np.pi / 180  # 90 degrees
+            tolerance = 20 * np.pi / 180  # 20 degrees
+            angles = joint_angle(data[instant, :, :], pivot_index=knee, p0_index=hip, p1_index=ankle)
+            return (angles > target - tolerance) & (angles < target + tolerance)
+
+        left_foot_is_off_ground = (
+            left_data[mid_jump, ankle, Axes.VERTICAL.value] > right_data[mid_jump, ankle, Axes.VERTICAL.value]
+        )
+        right_foot_is_off_ground = (
+            right_data[mid_jump, ankle, Axes.VERTICAL.value] > left_data[mid_jump, ankle, Axes.VERTICAL.value]
+        )
+        left_leg_is_flexed = leg_is_flexed(left_data, mid_jump[left_foot_is_off_ground])
+        right_leg_is_flexed = leg_is_flexed(right_data, mid_jump[right_foot_is_off_ground])
+
+        return left_leg_is_flexed.all() and right_leg_is_flexed.all()
 
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt

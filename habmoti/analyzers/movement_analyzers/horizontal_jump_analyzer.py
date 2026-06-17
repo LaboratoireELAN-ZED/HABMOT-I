@@ -115,7 +115,7 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
 
         left_is_success = task_is_successful(left_data)
         right_is_success = task_is_successful(right_data)
-        jump_successful = left_is_success | right_is_success
+        jump_successful = left_is_success & right_is_success
 
         return sum(jump_successful) == len(jump_indices)
 
@@ -125,8 +125,9 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
 
         index_of = lambda name: self._habmoti.device.body_model.from_name(name)
         shoulder, elbow, wrist, hip = 0, 1, 2, 3
-        left_arm = joint_centers[:, [index_of(f"left_{name}") for name in ["shoulder", "elbow", "wrist", "hip"]], :]
-        right_arm = joint_centers[:, [index_of(f"right_{name}") for name in ["shoulder", "elbow", "wrist", "hip"]], :]
+        joints = ["shoulder", "elbow", "wrist", "hip"]
+        left_arm = joint_centers[:, [index_of(f"left_{name}") for name in joints], :]
+        right_arm = joint_centers[:, [index_of(f"right_{name}") for name in joints], :]
         neck_data = joint_centers[:, index_of("neck"), :]
 
         def arm_is_extended(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:

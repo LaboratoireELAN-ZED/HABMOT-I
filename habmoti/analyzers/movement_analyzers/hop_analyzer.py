@@ -113,7 +113,7 @@ class HopAnalyzer(DataMovementAnalyzer):
 
         left_leg_is_success = leg_swings_forward_in_pendular_fasion(left_leg)
         right_leg_is_success = leg_swings_forward_in_pendular_fasion(right_leg)
-        legs_are_success = left_leg_is_success | right_leg_is_success
+        legs_are_success = left_leg_is_success & right_leg_is_success
 
         return sum(legs_are_success) == len(jump_indices)
 
