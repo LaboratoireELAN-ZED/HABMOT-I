@@ -141,6 +141,7 @@ Where:
     - `horizontal_jump` ([parameters](#analyzer-horizontal_jump-parameters))
     - `gallop` ([parameters](#analyzer-gallop-parameters))
     - `run` ([parameters](#analyzer-run-parameters))
+    - `slide` ([parameters](#analyzer-slide-parameters))
 
 #### Device Zed parameters
 The parameters for the `zed` device are as follows:
@@ -241,6 +242,15 @@ where `<true_or_false>` is a boolean that indicates whether to show the debug gr
 
 #### Analyzer run parameters
 The parameters for the `run` analyzer are as follows:
+```json
+{
+    "show_debug_graphs": "<true_or_false>"
+}
+```
+where `<true_or_false>` is a boolean that indicates whether to show the debug graphs in the Matplotlib window.
+
+#### Analyzer slide parameters
+The parameters for the `slide` analyzer are as follows:
 ```json
 {
     "show_debug_graphs": "<true_or_false>"

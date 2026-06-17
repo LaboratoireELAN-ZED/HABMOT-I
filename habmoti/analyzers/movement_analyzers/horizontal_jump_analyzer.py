@@ -53,7 +53,9 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
     @override
     def _perform_post_trial_analysis(self) -> None:
         # Find the peaks in the mean feet y position to find the mid-jump frames
-        jump_indices = compute_jump_indices(body_model=self._habmoti.device.body_model, frames=self._data_centered)
+        jump_indices = compute_jump_indices(
+            body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.1
+        )
 
         # Proceed to the analyses
         is_success = self._compute_knees_are_flexed_and_arms_are_back_prior_to_takeoff(jump_indices)

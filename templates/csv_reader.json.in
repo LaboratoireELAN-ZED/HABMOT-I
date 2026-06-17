@@ -37,6 +37,12 @@
             "parameters": {
                 "show_debug_graphs": < true | [false] >
             }
+        }, 
+        {
+            "name": "slide",
+            "parameters": {
+                "show_debug_graphs": < true | [false] >
+            }
         }
     ]
 }

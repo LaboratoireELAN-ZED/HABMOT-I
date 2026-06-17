@@ -8,13 +8,15 @@ from ....data.frame_data import FrameData
 type JumpIndices = tuple[float, float, float]
 
 
-def compute_jump_indices(body_model: BodyModel, frames: list[FrameData]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def compute_jump_indices(
+    body_model: BodyModel, frames: list[FrameData], threshold: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     data = np.array([data.body_kinematics.joint_centers for data in frames])
     left_foot_index = body_model.from_name("left_ankle")
     right_foot_index = body_model.from_name("right_ankle")
 
     mean_feet_height = np.mean(data[:, [left_foot_index, right_foot_index], 1], axis=1)
-    mid_jump_indices, _ = find_peaks(mean_feet_height, height=0.1)
+    mid_jump_indices, _ = find_peaks(mean_feet_height, height=threshold)
 
     # Compute the velocity of the feet
     mean_foot_velocity = np.gradient(mean_feet_height)

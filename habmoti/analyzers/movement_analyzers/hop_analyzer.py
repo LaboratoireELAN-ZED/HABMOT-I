@@ -53,7 +53,9 @@ class HopAnalyzer(DataMovementAnalyzer):
     @override
     def _perform_post_trial_analysis(self) -> None:
         # Find the peaks in the mean feet y position to find the mid-jump frames
-        jump_indices = compute_jump_indices(body_model=self._habmoti.device.body_model, frames=self._data_centered)
+        jump_indices = compute_jump_indices(
+            body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.1
+        )
         prefered_ground_foot = self._compute_prefered_ground_foot(jump_indices)
 
         # Proceed to the analyses
