@@ -15,11 +15,16 @@ _logger = logging.getLogger(__name__)
 @dataclass
 class HabmotCriteriaSlide:
     leading_foot_is_off_ground: bool = False
+    four_slides_on_preferred_foot: bool = False
+    four_slides_on_non_preferred_foot: bool = False
 
     def __str__(self) -> str:
         return f"""#####################
 Slide analysis results:
+  1. Body is sideways and aligned with the line on the flool: IMPOSSIBLE TO DETECT WITH THE CURRENT DATA
   2. Leading foot is off the ground: {self.leading_foot_is_off_ground}
+  3. Four slides on preferred foot: {self.four_slides_on_preferred_foot}
+  4. Four slides on non-preferred foot: {self.four_slides_on_non_preferred_foot}
 #####################"""
 
 
@@ -50,11 +55,19 @@ class SlideAnalyzer(DataMovementAnalyzer):
         jump_indices = compute_jump_indices(
             body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.05
         )
-        leading_foot = self._compute_leading_foot(jump_indices)
+        jump_leading_foot = self._compute_leading_foot(jump_indices)
+        preferred_foot = "left" if jump_leading_foot.count("left") >= jump_leading_foot.count("right") else "right"
+        non_preferred_foot = "right" if preferred_foot == "left" else "left"
 
         # Proceed to the analyses
-        is_success = self._compute_is_leading_foot_off_ground(jump_indices, leading_foot)
+        is_success = self._compute_is_leading_foot_off_ground(jump_indices, jump_leading_foot)
         self._criteria.leading_foot_is_off_ground = is_success
+
+        is_success = self._compute_consecutive_slides_on_foot(jump_indices, jump_leading_foot, preferred_foot)
+        self._criteria.four_slides_on_preferred_foot = is_success
+
+        is_success = self._compute_consecutive_slides_on_foot(jump_indices, jump_leading_foot, non_preferred_foot)
+        self._criteria.four_slides_on_non_preferred_foot = is_success
 
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
@@ -97,6 +110,27 @@ class SlideAnalyzer(DataMovementAnalyzer):
                 raise ValueError(f"Unexpected foot value: {foot}")
 
         return all(foot_is_off_ground)
+
+    def _compute_consecutive_slides_on_foot(
+        self, jump_indices: tuple[JumpIndices], leading_foot: list[str], foot_to_check: str
+    ) -> bool:
+        # Take the shortest amount of time between slides and find if there are 4 consecutive slides that are within that time threshold
+        mid_jump = [self._data[jump[1]].timestamp for jump in jump_indices]
+        time_between_slides = np.diff(mid_jump)
+        if len(time_between_slides) == 0:
+            return False
+        tolerance = 300  # 300 ms slower than the fastest time between slides is considered a slide
+        time_threshold = np.min(time_between_slides) + tolerance
+
+        consecutive_slides = 0
+        for foot, time in zip(leading_foot[:-1], time_between_slides):
+            if foot != foot_to_check or time > time_threshold:
+                consecutive_slides = 0
+                continue
+            consecutive_slides += 1
+            if consecutive_slides >= 4:
+                return True
+        return False
 
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt
