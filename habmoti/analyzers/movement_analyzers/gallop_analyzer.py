@@ -60,6 +60,9 @@ class GallopAnalyzer(DataMovementAnalyzer):
         is_success = self._compute_arms_flex_and_swing_forward(jump_indices)
         self._criteria.arms_flex_and_swing_forward = is_success
 
+        is_success = self._compute_lagging_foot_is_behind_on_landing(jump_indices, leading_foot)
+        self._criteria.lagging_foot_is_behind_on_landing = is_success
+
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
 
@@ -76,10 +79,10 @@ class GallopAnalyzer(DataMovementAnalyzer):
         mid_jump = [jump[1] for jump in jump_indices]
 
         frontward = Axes.FRONTAL.value
-        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), frontward]
-        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), frontward]
+        left_foot = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), frontward]
+        right_foot = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), frontward]
         prefered_ground_foot = (
-            "left" if sum(left_foot_height[mid_jump] > right_foot_height[mid_jump]) > len(mid_jump) / 2 else "right"
+            "left" if sum(left_foot[mid_jump] > right_foot[mid_jump]) > len(mid_jump) / 2 else "right"
         )
         return prefered_ground_foot
 
@@ -115,6 +118,18 @@ class GallopAnalyzer(DataMovementAnalyzer):
         arms_are_success = left_arm_is_success & right_arm_is_success
 
         return sum(arms_are_success) == len(jump_indices)
+
+    def _compute_lagging_foot_is_behind_on_landing(self, jump_indices: tuple[JumpIndices], leading_foot: str) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        end_jump = [jump[2] for jump in jump_indices]
+        frontward = Axes.FRONTAL.value
+        left_foot = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), frontward]
+        right_foot = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), frontward]
+
+        if leading_foot == "left":
+            return (left_foot[end_jump] > right_foot[end_jump]).all()
+        else:
+            return (right_foot[end_jump] > left_foot[end_jump]).all()
 
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt
