@@ -38,7 +38,7 @@ class GallopAnalyzer(DataMovementAnalyzer):
     @property
     @override
     def name(self) -> str:
-        return "Hop"
+        return "Gallop"
 
     @override
     def start_trial(self) -> None:
@@ -185,14 +185,14 @@ class GallopAnalyzer(DataMovementAnalyzer):
 
         mid_jump_indices = [jump[1] for jump in jump_indices]
 
-        fig = plt.figure("Hop Analysis")
+        fig = plt.figure("Gallop Analysis")
         plt.plot(t, left_foot_height, label="Left Foot Y")
         plt.plot(t, right_foot_height, label="Right Foot Y")
         plt.plot(t, mean_feet_height, label="Mean Feet Y", linestyle="--")
         [plt.axvline(x=t[index], color="g") for index in mid_jump_indices]
         plt.legend()
 
-        plt.title("Hop Analysis")
+        plt.title("Gallop Analysis")
         plt.xlabel("Time (s)")
         plt.ylabel("Height Position")
         plt.pause(0.1)

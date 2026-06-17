@@ -7,6 +7,7 @@ from ..analyzers.analyzer import AnalyzerList
 from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
 from ..analyzers.movement_analyzers.horizontal_jump_analyzer import HorizontalJumpAnalyzer
 from ..analyzers.movement_analyzers.gallop_analyzer import GallopAnalyzer
+from ..analyzers.movement_analyzers.run_analyzer import RunAnalyzer
 from ..analyzers.writers.to_console_analyzer import ToConsoleAnalyzer
 from ..analyzers.writers.to_csv_analyzer import ToCsvAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
@@ -357,6 +358,9 @@ class InterfaceCli:
             elif commands[0] == "gallop":
                 self._handle_add_gallop_command()
                 ignore_has_navigated = True
+            elif commands[0] == "run":
+                self._handle_add_run_command()
+                ignore_has_navigated = True
             else:
                 print(f"  Unknown analyzer: {commands[0]}. Use the 'list' subcommand for available analyzers.")
         except Exception as e:
@@ -478,6 +482,10 @@ class InterfaceCli:
     def _handle_add_gallop_command(self):
         self._habmoti.analyzer.append(GallopAnalyzer())
         print(f"  Added a Gallop analyzer.")
+
+    def _handle_add_run_command(self):
+        self._habmoti.analyzer.append(RunAnalyzer())
+        print(f"  Added a Run analyzer.")
 
     def _handle_controller_command(self, command: list[str], previous_commands: list[str]) -> bool:
         if self._habmoti.device is None:

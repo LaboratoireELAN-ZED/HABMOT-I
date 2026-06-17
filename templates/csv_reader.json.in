@@ -32,5 +32,11 @@
                 "show_debug_graphs": < true | [false] >
             }
         },
+        {
+            "name": "run",
+            "parameters": {
+                "show_debug_graphs": < true | [false] >
+            }
+        }
     ]
 }
