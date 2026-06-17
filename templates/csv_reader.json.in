@@ -26,5 +26,11 @@
                 "show_debug_graphs": < true | [false] >
             }
         },
+        {
+            "name": "gallop",
+            "parameters": {
+                "show_debug_graphs": < true | [false] >
+            }
+        },
     ]
 }

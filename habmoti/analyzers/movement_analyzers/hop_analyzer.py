@@ -160,9 +160,10 @@ class HopAnalyzer(DataMovementAnalyzer):
             return arm_data[start_jump, elbow, frontward] < arm_data[mid_jump, elbow, frontward]
 
         def arm_is_flexed(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
-            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
+            target = 90 * np.pi / 180  # 90 degrees
+            tolerance = 10 * np.pi / 180  # 10 degrees
             angles = joint_angle(arm_data[instant, :, :], pivot_index=elbow, p0_index=shoulder, p1_index=wrist)
-            return (angles > np.pi / 2 - threshold_angle) & (angles < np.pi / 2 + threshold_angle)
+            return (angles > target - tolerance) & (angles < target + tolerance)
 
         def arm_is_swinging_forward(arm_data: np.ndarray) -> npt.NDArray[np.bool_]:
             return arm_is_moving_forward(arm_data) & arm_is_flexed(arm_data, mid_jump)

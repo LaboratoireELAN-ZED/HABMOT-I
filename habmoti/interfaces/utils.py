@@ -1,4 +1,5 @@
 from ..analyzers.analyzer import Analyzer, AnalyzerList
+from ..analyzers.movement_analyzers.gallop_analyzer import GallopAnalyzer
 from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
 from ..analyzers.movement_analyzers.horizontal_jump_analyzer import HorizontalJumpAnalyzer
@@ -23,6 +24,7 @@ _analyzer_factories = {
     "to_matplotlib": ToMatplotlibAnalyzer,
     "hop": HopAnalyzer,
     "horizontal_jump": HorizontalJumpAnalyzer,
+    "gallop": GallopAnalyzer,
 }
 
 

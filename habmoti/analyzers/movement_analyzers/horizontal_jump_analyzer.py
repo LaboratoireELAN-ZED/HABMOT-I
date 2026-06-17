@@ -91,14 +91,16 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         neck_data = joint_centers[:, index_of("neck"), :]
 
         def leg_is_flexed(data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
-            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
+            target = 90 * np.pi / 180  # 90 degrees
+            tolerance = 10 * np.pi / 180  # 10 degrees
             angles = joint_angle(data[instant, :, :], pivot_index=knee, p0_index=hip, p1_index=ankle)
-            return (angles > np.pi / 2 - threshold_angle) & (angles < np.pi / 2 + threshold_angle)
+            return (angles > target - tolerance) & (angles < target + tolerance)
 
         def arm_is_extended(data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
-            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
+            target = 180 * np.pi / 180  # 180 degrees
+            tolerance = 10 * np.pi / 180  # 10 degrees in radians
             angles = joint_angle(data[instant, :, :], pivot_index=shoulder, p0_index=elbow, p1_index=hip)
-            return (angles > np.pi - threshold_angle) & (angles < np.pi + threshold_angle)
+            return (angles > target - tolerance) & (angles < target + tolerance)
 
         def arm_is_behind_back(data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
             frontward = Axes.FRONTAL.value
@@ -128,9 +130,10 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         neck_data = joint_centers[:, index_of("neck"), :]
 
         def arm_is_extended(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
-            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
+            target = 0 * np.pi / 180  # 0 degrees
+            tolerance = 10 * np.pi / 180  # 10 degrees in radians
             angles = joint_angle(arm_data[instant, :, :], pivot_index=shoulder, p0_index=elbow, p1_index=hip)
-            is_extended = (angles > 0 - threshold_angle) & (angles < 0 + threshold_angle)
+            is_extended = (angles > target - tolerance) & (angles < target + tolerance)
             return is_extended
 
         def arm_is_above_head(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
@@ -168,16 +171,6 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         hands_height = joint_centers[:, [index_of("left_wrist"), index_of("right_wrist")], Axes.VERTICAL.value]
 
         hands_velocity = np.gradient(hands_height, axis=0)
-
-        from matplotlib import pyplot as plt
-
-        plt.plot(hands_velocity[:, 0], label="Left Hand Velocity")
-        plt.plot(hands_velocity[:, 1], label="Right Hand Velocity")
-        plt.legend()
-        plt.title("Hand Vertical Velocity")
-        plt.xlabel("Frame")
-        plt.ylabel("Velocity")
-        plt.show()
         hands_height_are_forced_downward = hands_velocity[end, :] < 0
         return hands_height_are_forced_downward.all()
 
