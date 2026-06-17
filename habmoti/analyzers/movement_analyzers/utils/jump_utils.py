@@ -19,7 +19,7 @@ def compute_jump_indices(body_model: BodyModel, frames: list[FrameData]) -> tupl
     # Compute the velocity of the feet
     mean_foot_velocity = np.gradient(mean_feet_height)
 
-    # Find the first time the derivative become positive before (start) and after (end) of each mid jump indices
+    # Find the first time the velocity become positive before (start) and after (end) of each mid jump indices
     start_jump_indices = []
     end_jump_indices = []
     for mid in mid_jump_indices:

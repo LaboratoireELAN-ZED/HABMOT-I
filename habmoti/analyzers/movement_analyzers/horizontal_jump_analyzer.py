@@ -15,13 +15,17 @@ _logger = logging.getLogger(__name__)
 @dataclass
 class HabmotCriteriaHorizontalJump:
     knees_are_flexed_and_arms_are_back_prior_to_takeoff: bool = False
+    hands_are_extended_and_above_head: bool = False
     feet_are_together: bool = False
+    hands_are_forced_downward_at_landing: bool = False
 
     def __str__(self) -> str:
         return f"""#####################
 Horizontal jump analysis results:
   1. Knees are flexed and arms are back prior to takeoff: {self.knees_are_flexed_and_arms_are_back_prior_to_takeoff}
+  2. Hands are extended and above head: {self.hands_are_extended_and_above_head}
   3. Feet are together: {self.feet_are_together}
+  4. Hands are forced downward at landing: {self.hands_are_forced_downward_at_landing}
 #####################"""
 
 
@@ -55,8 +59,14 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         is_success = self._compute_knees_are_flexed_and_arms_are_back_prior_to_takeoff(jump_indices)
         self._criteria.knees_are_flexed_and_arms_are_back_prior_to_takeoff = is_success
 
+        is_success = self._compute_hands_are_extended_and_above_head(jump_indices)
+        self._criteria.hands_are_extended_and_above_head = is_success
+
         is_success = self._compute_feet_are_together(jump_indices)
         self._criteria.feet_are_together = is_success
+
+        is_success = self._compute_hands_are_forced_downward_at_landing(jump_indices)
+        self._criteria.hands_are_forced_downward_at_landing = is_success
 
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
@@ -107,6 +117,35 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
 
         return sum(jump_successful) == len(jump_indices)
 
+    def _compute_hands_are_extended_and_above_head(self, jump_indices: tuple[JumpIndices]) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        mid_jump = [jump[1] - 1 for jump in jump_indices]
+
+        index_of = lambda name: self._habmoti.device.body_model.from_name(name)
+        shoulder, elbow, wrist, hip = 0, 1, 2, 3
+        left_arm = joint_centers[:, [index_of(f"left_{name}") for name in ["shoulder", "elbow", "wrist", "hip"]], :]
+        right_arm = joint_centers[:, [index_of(f"right_{name}") for name in ["shoulder", "elbow", "wrist", "hip"]], :]
+        neck_data = joint_centers[:, index_of("neck"), :]
+
+        def arm_is_extended(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
+            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
+            angles = joint_angle(arm_data[instant, :, :], pivot_index=shoulder, p0_index=elbow, p1_index=hip)
+            is_extended = (angles > 0 - threshold_angle) & (angles < 0 + threshold_angle)
+            return is_extended
+
+        def arm_is_above_head(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
+            is_above_head = arm_data[instant, wrist, Axes.VERTICAL.value] > neck_data[instant, Axes.VERTICAL.value]
+            return is_above_head
+
+        def arm_task_is_successful(arm_data: np.ndarray) -> npt.NDArray[np.bool_]:
+            return arm_is_extended(arm_data, instant=mid_jump) & arm_is_above_head(arm_data, instant=mid_jump)
+
+        left_is_success = arm_task_is_successful(left_arm)
+        right_is_success = arm_task_is_successful(right_arm)
+        jump_successful = left_is_success & right_is_success
+
+        return sum(jump_successful) == len(jump_indices)
+
     def _compute_feet_are_together(self, jump_indices: tuple[JumpIndices]) -> bool:
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
 
@@ -120,6 +159,27 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         indices = start + end
         feet_distance = np.abs(left_foot_height[indices] - right_foot_height[indices])
         return max(feet_distance) < 0.1  # Threshold of 10 cm between the feet at mid-jump
+
+    def _compute_hands_are_forced_downward_at_landing(self, jump_indices: tuple[JumpIndices]) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+
+        end = [jump[2] - 1 for jump in jump_indices]
+        index_of = lambda name: self._habmoti.device.body_model.from_name(name)
+        hands_height = joint_centers[:, [index_of("left_wrist"), index_of("right_wrist")], Axes.VERTICAL.value]
+
+        hands_velocity = np.gradient(hands_height, axis=0)
+
+        from matplotlib import pyplot as plt
+
+        plt.plot(hands_velocity[:, 0], label="Left Hand Velocity")
+        plt.plot(hands_velocity[:, 1], label="Right Hand Velocity")
+        plt.legend()
+        plt.title("Hand Vertical Velocity")
+        plt.xlabel("Frame")
+        plt.ylabel("Velocity")
+        plt.show()
+        hands_height_are_forced_downward = hands_velocity[end, :] < 0
+        return hands_height_are_forced_downward.all()
 
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt

@@ -4,6 +4,10 @@ Taches:
     - Faire l'analyse par ordre de difficulte d'implementation
 
 Answer to the following questions: 
+    - GENERAL
+        - Timing is never mentioned in any of the criteria. Should we use specific key instants (e.g., take-off, mid-jump) to evaluate the criteria? Or should we consider the entire movement? If so, the mean?
+        - When criteria are applied accross multiple repetitions, how many successful repetitions are required to consider the task successful?
+        - Should we have an algorithm to detect the quality of the movements itself?
     - 3. Hop
         - 1. What "pendular fashion" actually means?
         - 2. What is the anchor point to determine whether the leg is behind?
@@ -12,8 +16,10 @@ Answer to the following questions:
         - 1. What means "flexed"?
         - 1. What is "back" (currently the neck)?
         - 1. What means "extended"?
+        - 2. What is the definition of "forcefully"?
+        - 2. At what time exactly?
         - 3. What is the allowed amount of time and distance to consider "feet [are] together"?
-        - 
+        - 4. Hands are forced downward directly at landing, or slightly prior? It tends to be almost zero at landing...
     
 
 Abandonne:
