@@ -14,16 +14,18 @@ _logger = logging.getLogger(__name__)
 
 @dataclass
 class HabmotCriteriaHop:
-    can_do_four_consecutive_jumps: bool = False
+    non_hopping_leg_swings_forward_perpendicular: bool = False
     non_hopping_leg_remains_behind: bool = False
     arms_flex_and_swing_forward: bool = False
+    can_do_four_consecutive_jumps: bool = False
 
     def __str__(self) -> str:
         return f"""#####################
 Hop analysis results:
-  Can do four consecutive jumps: {self.can_do_four_consecutive_jumps}
+  Non-hopping leg swings forward perpendicular: {self.non_hopping_leg_swings_forward_perpendicular}
   Non-hopping leg remains behind: {self.non_hopping_leg_remains_behind}
   Arms flex and swing forward: {self.arms_flex_and_swing_forward}
+  Can do four consecutive jumps: {self.can_do_four_consecutive_jumps}
 #####################"""
 
 
@@ -55,14 +57,17 @@ class HopAnalyzer(DataMovementAnalyzer):
         prefered_ground_foot = self._compute_prefered_ground_foot(jump_indices)
 
         # Proceed to the analyses
-        best_consecutive_jumps = self._compute_consecutive_jumps(prefered_ground_foot, jump_indices)
-        self._criteria.can_do_four_consecutive_jumps = best_consecutive_jumps >= 4
+        is_success = self._compute_non_hopping_leg_swings_forward_perpendicular(jump_indices)
+        self._criteria.non_hopping_leg_swings_forward_perpendicular = is_success
 
         is_success = self._compute_non_hopping_leg_remains_behind(prefered_ground_foot, jump_indices)
         self._criteria.non_hopping_leg_remains_behind = is_success
 
         is_success = self._compute_arms_flex_and_swing_forward(jump_indices)
         self._criteria.arms_flex_and_swing_forward = is_success
+
+        best_consecutive_jumps = self._compute_consecutive_jumps(prefered_ground_foot, jump_indices)
+        self._criteria.can_do_four_consecutive_jumps = best_consecutive_jumps >= 4
 
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
@@ -89,30 +94,35 @@ class HopAnalyzer(DataMovementAnalyzer):
         )
         return prefered_ground_foot
 
-    def _compute_consecutive_jumps(
-        self,
-        prefered_ground_foot: str,
-        jump_indices: list[JumpIndices],
-    ) -> None:
+    def _compute_non_hopping_leg_swings_forward_perpendicular(self, jump_indices: tuple[JumpIndices]) -> bool:
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        start_jump = [jump[0] for jump in jump_indices]
+        mid_jump = [jump[1] for jump in jump_indices]
 
-        axis_index = Axes.VERTICAL.value
-        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
-        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
-        mid_jump_indices = [jump[1] for jump in jump_indices]
+        index_of = lambda name: self._habmoti.device.body_model.from_name(name)
+        left_leg = joint_centers[:, [index_of("left_hip"), index_of("left_knee"), index_of("neck")], :]
+        right_leg = joint_centers[:, [index_of("right_hip"), index_of("right_knee"), index_of("neck")], :]
+        hip = 0
+        knee = 1
+        neck = 2
 
-        consecutive_jumps = 0
-        best_consecutive_jumps_so_far = 0
-        for mid in mid_jump_indices:
-            if prefered_ground_foot == "left" and left_foot_height[mid] < right_foot_height[mid]:
-                consecutive_jumps += 1
-            elif prefered_ground_foot == "right" and right_foot_height[mid] < left_foot_height[mid]:
-                consecutive_jumps += 1
-            else:
-                best_consecutive_jumps_so_far = max(best_consecutive_jumps_so_far, consecutive_jumps)
-                consecutive_jumps = 0
-        best_consecutive_jumps_so_far = max(best_consecutive_jumps_so_far, consecutive_jumps)
-        return best_consecutive_jumps_so_far
+        def leg_is_moving_forward(leg_data: np.ndarray) -> npt.NDArray[np.bool_]:
+            frontward = Axes.FRONTAL.value
+            return leg_data[start_jump, knee, frontward] < leg_data[mid_jump, knee, frontward]
+
+        def leg_is_perpendicular(leg_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
+            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
+            angles = segment_angle(leg_data[instant, :, :], pivot_index=hip, p0_index=knee, p1_index=neck)
+            return (angles > np.pi / 2 - threshold_angle) & (angles < np.pi / 2 + threshold_angle)
+
+        def leg_swings_forward_perpendicular(leg_data: np.ndarray) -> npt.NDArray[np.bool_]:
+            return leg_is_moving_forward(leg_data) & leg_is_perpendicular(leg_data, mid_jump)
+
+        left_leg_is_success = leg_swings_forward_perpendicular(left_leg)
+        right_leg_is_success = leg_swings_forward_perpendicular(right_leg)
+        non_hopping_leg_swings_forward_perpendicular = left_leg_is_success | right_leg_is_success
+
+        return sum(non_hopping_leg_swings_forward_perpendicular) == len(jump_indices)
 
     def _compute_non_hopping_leg_remains_behind(
         self,
@@ -145,8 +155,6 @@ class HopAnalyzer(DataMovementAnalyzer):
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
         start_jump = [jump[0] for jump in jump_indices]
         mid_jump = [jump[1] for jump in jump_indices]
-        end_jump = [jump[2] for jump in jump_indices]
-        frontward = Axes.FRONTAL.value
 
         index_of = lambda name: self._habmoti.device.body_model.from_name(name)
 
@@ -157,6 +165,7 @@ class HopAnalyzer(DataMovementAnalyzer):
         wrist = 2
 
         def arm_is_moving_forward(arm_data: np.ndarray) -> npt.NDArray[np.bool_]:
+            frontward = Axes.FRONTAL.value
             return arm_data[start_jump, elbow, frontward] < arm_data[mid_jump, elbow, frontward]
 
         def arm_is_flexed(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
@@ -172,6 +181,31 @@ class HopAnalyzer(DataMovementAnalyzer):
         arms_are_success = left_arm_is_success & right_arm_is_success
 
         return sum(arms_are_success) == len(jump_indices)
+
+    def _compute_consecutive_jumps(
+        self,
+        prefered_ground_foot: str,
+        jump_indices: list[JumpIndices],
+    ) -> None:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+
+        axis_index = Axes.VERTICAL.value
+        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
+        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
+        mid_jump_indices = [jump[1] for jump in jump_indices]
+
+        consecutive_jumps = 0
+        best_consecutive_jumps_so_far = 0
+        for mid in mid_jump_indices:
+            if prefered_ground_foot == "left" and left_foot_height[mid] < right_foot_height[mid]:
+                consecutive_jumps += 1
+            elif prefered_ground_foot == "right" and right_foot_height[mid] < left_foot_height[mid]:
+                consecutive_jumps += 1
+            else:
+                best_consecutive_jumps_so_far = max(best_consecutive_jumps_so_far, consecutive_jumps)
+                consecutive_jumps = 0
+        best_consecutive_jumps_so_far = max(best_consecutive_jumps_so_far, consecutive_jumps)
+        return best_consecutive_jumps_so_far
 
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt
