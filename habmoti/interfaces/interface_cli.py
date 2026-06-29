@@ -8,6 +8,7 @@ from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
 from ..analyzers.movement_analyzers.horizontal_jump_analyzer import HorizontalJumpAnalyzer
 from ..analyzers.movement_analyzers.gallop_analyzer import GallopAnalyzer
 from ..analyzers.movement_analyzers.run_analyzer import RunAnalyzer
+from ..analyzers.movement_analyzers.skip_analyzer import SkipAnalyzer
 from ..analyzers.movement_analyzers.slide_analyzer import SlideAnalyzer
 from ..analyzers.writers.to_console_analyzer import ToConsoleAnalyzer
 from ..analyzers.writers.to_csv_analyzer import ToCsvAnalyzer
@@ -22,7 +23,10 @@ _logger = logging.getLogger(__name__)
 
 
 def navigable_menu(func):
-    def wrapper(self, commands: list[str], previous_commands: list[str] = []):
+    def wrapper(self, commands: list[str], previous_commands: list[str] = None):
+        if previous_commands is None:
+            previous_commands = []
+
         has_navigated = not commands
         if has_navigated:
             commands = _prompt_commands(previous_commands=previous_commands)
@@ -163,6 +167,8 @@ class InterfaceCli:
             self._handle_device_add_command(commands[1:], previous_commands + [commands[0]])
         elif commands[0] == "added":
             print(f"  Added device: {self._habmoti.device.name if self._habmoti.device is not None else 'None'}")
+        elif commands[0] in ["remove"]:
+            self._handle_device_remove_command(commands[1:])
         else:
             print(
                 f"  Unknown 'device' subcommand: '{commands[0]}'. Use the 'help' subcommand for a list of subcommands."
@@ -183,13 +189,32 @@ class InterfaceCli:
     zed_mock - ZED (Mock) camera
     csv_reader - CSV reader""")
 
-    def _handle_device_add_command(self, commands: list[str], previous_commands: list[str] = []):
+    def _handle_device_add_command(self, commands: list[str], previous_commands: list[str] = None):
+        if previous_commands is None:
+            previous_commands = []
+        if self._habmoti.device is not None:
+            self._handle_device_remove_command()
+            if self._habmoti.device is not None:
+                return
+        self._handle_device_add_command_guarded(commands=commands, previous_commands=previous_commands)
+
+    def _handle_device_remove_command(self, parameters: list[str] = None):
+        if self._habmoti.device is None:
+            return
+
+        if parameters is None:
+            parameters = []
+
         if self._habmoti.is_initialized:
             print(
                 "  Cannot change device while Habmoti is started. Please stop the pipeline before changing the device."
             )
             return
-        if self._habmoti.device is not None:
+
+        parameters = _fill_parameters(all_keys=["force"], parameters=parameters)
+        if parameters["force"] is not None:
+            response = "y" if parameters["force"].lower() == "true" else "n"
+        else:
             response = (
                 input(
                     "  A device is already added. Please note, this will remove the current analyzer. "
@@ -198,12 +223,15 @@ class InterfaceCli:
                 .strip()
                 .lower()
             )
-            if response != "y":
-                return
-        self._handle_device_add_command_guarded(commands=commands, previous_commands=previous_commands)
+        if response != "y":
+            return
+
+        self._habmoti.analyzer = None
+        self._habmoti.device = None
+        print("  Device removed.")
 
     @navigable_menu
-    def _handle_device_add_command_guarded(self, commands: list[str], previous_commands: list[str] = []) -> bool:
+    def _handle_device_add_command_guarded(self, commands: list[str], previous_commands: list[str] = None) -> bool:
         ignore_has_navigated = False
 
         try:
@@ -317,7 +345,14 @@ class InterfaceCli:
       opengl     - Display the joint positions in an OpenGL window
     writers:
       console    - Print the joint positions to the console
-      csv        - Write the joint positions to a CSV file""")
+      csv        - Write the joint positions to a CSV file
+    movement analyzers:
+        hop                 - Detect hops
+        horizontal_jump     - Detect horizontal jumps
+        gallop              - Detect gallops
+        run                 - Detect runs
+        skip                - Detect skips
+        slide               - Detect slides""")
 
     def _handle_analyzer_add_command(self, commands: list[str], previous_commands: list[str]):
         if self._habmoti.device is None:
@@ -351,19 +386,22 @@ class InterfaceCli:
                 self._handle_add_csv_command(commands[1:])
                 ignore_has_navigated = True
             elif commands[0] == "hop":
-                self._handle_add_hop_command()
+                self._handle_add_hop_command(commands[1:])
                 ignore_has_navigated = True
             elif commands[0] == "horizontal_jump":
-                self._handle_add_horizontal_jump_command()
+                self._handle_add_horizontal_jump_command(commands[1:])
                 ignore_has_navigated = True
             elif commands[0] == "gallop":
-                self._handle_add_gallop_command()
+                self._handle_add_gallop_command(commands[1:])
                 ignore_has_navigated = True
             elif commands[0] == "run":
-                self._handle_add_run_command()
+                self._handle_add_run_command(commands[1:])
+                ignore_has_navigated = True
+            elif commands[0] == "skip":
+                self._handle_add_skip_command(commands[1:])
                 ignore_has_navigated = True
             elif commands[0] == "slide":
-                self._handle_add_slide_command()
+                self._handle_add_slide_command(commands[1:])
                 ignore_has_navigated = True
             else:
                 print(f"  Unknown analyzer: {commands[0]}. Use the 'list' subcommand for available analyzers.")
@@ -475,24 +513,64 @@ class InterfaceCli:
         )
         print(f"  Added a CSV writer.")
 
-    def _handle_add_hop_command(self):
-        self._habmoti.analyzer.append(HopAnalyzer())
+    def _handle_add_hop_command(self, parameters: list[str] = None):
+        if parameters is None:
+            parameters = []
+        parameters = _fill_parameters(all_keys=["show_debug_graphs"], parameters=parameters)
+        if parameters["show_debug_graphs"] is not None:
+            parameters["show_debug_graphs"] = parameters["show_debug_graphs"].strip().lower() == "true"
+
+        self._habmoti.analyzer.append(HopAnalyzer(**parameters))
         print(f"  Added a Hop analyzer.")
 
-    def _handle_add_horizontal_jump_command(self):
-        self._habmoti.analyzer.append(HorizontalJumpAnalyzer())
+    def _handle_add_horizontal_jump_command(self, parameters: list[str] = None):
+        if parameters is None:
+            parameters = []
+        parameters = _fill_parameters(all_keys=["show_debug_graphs"], parameters=parameters)
+        if parameters["show_debug_graphs"] is not None:
+            parameters["show_debug_graphs"] = parameters["show_debug_graphs"].strip().lower() == "true"
+
+        self._habmoti.analyzer.append(HorizontalJumpAnalyzer(**parameters))
         print(f"  Added a Horizontal Jump analyzer.")
 
-    def _handle_add_gallop_command(self):
-        self._habmoti.analyzer.append(GallopAnalyzer())
+    def _handle_add_gallop_command(self, parameters: list[str] = None):
+        if parameters is None:
+            parameters = []
+        parameters = _fill_parameters(all_keys=["show_debug_graphs"], parameters=parameters)
+        if parameters["show_debug_graphs"] is not None:
+            parameters["show_debug_graphs"] = parameters["show_debug_graphs"].strip().lower() == "true"
+
+        self._habmoti.analyzer.append(GallopAnalyzer(**parameters))
         print(f"  Added a Gallop analyzer.")
 
-    def _handle_add_run_command(self):
-        self._habmoti.analyzer.append(RunAnalyzer())
+    def _handle_add_run_command(self, parameters: list[str] = None):
+        if parameters is None:
+            parameters = []
+        parameters = _fill_parameters(all_keys=["show_debug_graphs"], parameters=parameters)
+        if parameters["show_debug_graphs"] is not None:
+            parameters["show_debug_graphs"] = parameters["show_debug_graphs"].strip().lower() == "true"
+
+        self._habmoti.analyzer.append(RunAnalyzer(**parameters))
         print(f"  Added a Run analyzer.")
 
-    def _handle_add_slide_command(self):
-        self._habmoti.analyzer.append(SlideAnalyzer())
+    def _handle_add_skip_command(self, parameters: list[str] = None):
+        if parameters is None:
+            parameters = []
+        parameters = _fill_parameters(all_keys=["show_debug_graphs"], parameters=parameters)
+        if parameters["show_debug_graphs"] is not None:
+            parameters["show_debug_graphs"] = parameters["show_debug_graphs"].strip().lower() == "true"
+
+        self._habmoti.analyzer.append(SkipAnalyzer(**parameters))
+        print(f"  Added a Skip analyzer.")
+
+    def _handle_add_slide_command(self, parameters: list[str] = None):
+        if parameters is None:
+            parameters = []
+        parameters = _fill_parameters(all_keys=["show_debug_graphs"], parameters=parameters)
+        if parameters["show_debug_graphs"] is not None:
+            parameters["show_debug_graphs"] = parameters["show_debug_graphs"].strip().lower() == "true"
+
+        self._habmoti.analyzer.append(SlideAnalyzer(**parameters))
         print(f"  Added a Slide analyzer.")
 
     def _handle_controller_command(self, command: list[str], previous_commands: list[str]) -> bool:

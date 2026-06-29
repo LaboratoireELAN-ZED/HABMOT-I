@@ -3,6 +3,7 @@ from ..analyzers.movement_analyzers.gallop_analyzer import GallopAnalyzer
 from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
 from ..analyzers.movement_analyzers.horizontal_jump_analyzer import HorizontalJumpAnalyzer
 from ..analyzers.movement_analyzers.run_analyzer import RunAnalyzer
+from ..analyzers.movement_analyzers.skip_analyzer import SkipAnalyzer
 from ..analyzers.movement_analyzers.slide_analyzer import SlideAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
 from ..analyzers.viewers.to_ogl_analyzer import ToOglAnalyzer
@@ -28,6 +29,7 @@ _analyzer_factories = {
     "horizontal_jump": HorizontalJumpAnalyzer,
     "gallop": GallopAnalyzer,
     "run": RunAnalyzer,
+    "skip": SkipAnalyzer,
     "slide": SlideAnalyzer,
 }
 

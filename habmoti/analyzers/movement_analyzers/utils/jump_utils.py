@@ -5,12 +5,10 @@ import numpy as np
 from ....data.body_kinematics import BodyModel
 from ....data.frame_data import FrameData
 
-type JumpIndices = tuple[float, float, float]
+type JumpIndices = tuple[float, float, float]  # (start_index, mid_index, end_index)
 
 
-def compute_jump_indices(
-    body_model: BodyModel, frames: list[FrameData], threshold: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def compute_jump_indices(body_model: BodyModel, frames: list[FrameData], threshold: float) -> JumpIndices:
     data = np.array([data.body_kinematics.joint_centers for data in frames])
     left_foot_index = body_model.from_name("left_ankle")
     right_foot_index = body_model.from_name("right_ankle")

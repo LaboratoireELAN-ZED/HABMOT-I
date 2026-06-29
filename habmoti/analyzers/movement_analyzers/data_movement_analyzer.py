@@ -59,6 +59,7 @@ class DataMovementAnalyzer(Analyzer):
     @override
     def start_trial(self) -> None:
         self._is_analyzing = True
+        self._are_data_initialized = False
         self._data_centered.clear()
         self._data.clear()
         _logger.info(f"Starting to analyze {self.name}")
