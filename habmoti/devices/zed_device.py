@@ -428,7 +428,9 @@ class ZedMockDevice(ZedDevice):
                 "enable_body_tracking": lambda _, __: None,
                 "process": lambda _: ZedMockDevice.FUSION_ERROR_CODE.SUCCESS,
                 "retrieve_bodies": lambda _, bodies, __: None,
-                "get_current_timestamp": lambda _: type("Timestamp", (), {"data_ns": int(time.time() * 1000 * 1000)})(),
+                "get_current_timestamp": lambda _: type(
+                    "Timestamp", (), {"data_ns": int(time.time() * 1000 * 1000 * 1000)}
+                )(),
             },
         )()
 
