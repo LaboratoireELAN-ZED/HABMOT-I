@@ -266,7 +266,7 @@ class InterfaceCli:
             parameters,
             key="filepath",
             prompt="A configuration file is required to use the ZED camera. If not done already, you can create one by using the ZED360 tool.\n  Path of the file",
-            default="zed_configuration.json",
+            default="zed360_configuration.json",
             value_type=str,
         )
         if is_mock:

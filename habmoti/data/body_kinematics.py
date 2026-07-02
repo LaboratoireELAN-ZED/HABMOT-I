@@ -160,4 +160,29 @@ class MultiBodyKinematics(BodyKinematics[BodyModelType]):
 
     @property
     def body_coordinate_system(self) -> list[CoordinateSystemType]:
-        raise NotImplementedError("Body coordinate systems are not implemented for MultiBodyKinematics yet")
+        if len(self._values) != 1:
+            # Only compute frame coordinate system when models are fused
+            return []
+
+        origin_indices, first_axis, second_axis, keep_axis = self._body_model.body_coordinate_systems_indices()
+        first_axis_indices, first_axis_name = first_axis
+        second_axis_indices, second_axis_name = second_axis
+
+        values = self._values[0]
+        origin = np.mean(values[origin_indices, :], axis=0)
+        first_axis_start = np.mean(values[first_axis_indices[0], :], axis=0)
+        first_axis_end = np.mean(values[first_axis_indices[1], :], axis=0)
+        second_axis_start = np.mean(values[second_axis_indices[0], :], axis=0)
+        second_axis_end = np.mean(values[second_axis_indices[1], :], axis=0)
+        axis_to_keep = keep_axis
+
+        return [
+            create_system_of_axes(
+                origin=origin,
+                first_axis=first_axis_end - first_axis_start,
+                first_axis_name=first_axis_name,
+                second_axis=second_axis_end - second_axis_start,
+                second_axis_name=second_axis_name,
+                keep_axis=axis_to_keep,
+            )
+        ]

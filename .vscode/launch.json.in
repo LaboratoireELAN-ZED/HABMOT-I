@@ -47,7 +47,7 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}",
                 "FILES_TO_PROCESS": "[\"comma\", \"separated\", \"list\", \"of\", \"files\"]",
-                "ANALYZER_TO_USE": "[\"comma\", \"separated\", \"list\", \"of\", \"analyzers\"]",  # Can be a single one. Options are "gallop", "hop", "horizontal_jump", "run", "skip", "slide"
+                "ANALYZER_TO_USE": "[\"comma\", \"separated\", \"list\", \"of\", \"analyzers\"]",  // Can be a single one. Options are "gallop", "hop", "horizontal_jump", "run", "skip", "slide"
             },
             "cwd": "${workspaceFolder}/runner/"
         },

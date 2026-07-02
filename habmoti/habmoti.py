@@ -154,10 +154,6 @@ class Habmoti:
         Prepare the device for capture, then continuously capture data from the device and put it in the queue until stopped.
         """
         try:
-            _logger.warning(
-                "WARNING: Starting the device inside a sub-thread may cause issues. "
-                "When this modification is tested and confirmed with a real device, you can remove this warning."
-            )
             self._device.start(habmoti=self)
             self._wait_for_analyzer()
             self._capture_loop()

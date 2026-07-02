@@ -1,6 +1,6 @@
 {
     "device": {
-        "name": "zed",
+        "name": "zed_mock",
         "parameters": {
             "configuration_filepath": "<PATH_TO_ZED_CONFIG>",
             "target_fps": <TARGET_FPS>,
